@@ -1,0 +1,27 @@
+name: sentinel-env
+version: 1.0.0
+description: "AI Agent Safety & Jailbreak Detection Environment — The OWASP Benchmark for AI Agents"
+sdk: docker
+app_port: 7860
+base_path: /
+tags:
+  - openenv
+  - safety
+  - security
+  - jailbreak-detection
+  - agent-evaluation
+  - adversarial-testing
+metadata:
+  author: "OpenENV RL Challenge 2026"
+  license: "MIT"
+  repository: "https://github.com/meta-pytorch/OpenEnv"
+  tasks:
+    - name: basic-injection
+      difficulty: easy
+      description: "Detect obvious prompt injection attempts"
+    - name: social-engineering
+      difficulty: medium
+      description: "Detect sophisticated social engineering attacks"
+    - name: stealth-exfiltration
+      difficulty: hard
+      description: "Detect covert data exfiltration attempts"

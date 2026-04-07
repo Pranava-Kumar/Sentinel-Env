@@ -1,0 +1,86 @@
+# ── Secrets & Credentials ─────────────────────────────────────────────
+.env
+.env.local
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+credentials.json
+
+# ── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ── Virtual Environments ───────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+
+# ── IDE & Editor ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ── AI Agent & Planning (Secret Sauce) ────────────────────────────────
+# These contain our strategic design decisions, architecture docs, and planning
+docs/
+.agents/
+.qwen/
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+
+# ── Container ──────────────────────────────────────────────────────────
+.dockerignore.local
+*.tar
+
+# ── OS ─────────────────────────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+*.log
+
+# ── Testing ────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ── Temp & Backup ──────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.backup
+*.orig
+*~
+
+# ── Hugging Face ───────────────────────────────────────────────────────
+.huggingface/
+token
+
+# ── Git ────────────────────────────────────────────────────────────────
+.git/
