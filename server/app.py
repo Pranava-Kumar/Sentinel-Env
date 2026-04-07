@@ -8,6 +8,7 @@ Implements OpenEnv-compatible endpoints:
 """
 
 import logging
+import asyncio
 from typing import Optional
 from contextlib import asynccontextmanager
 
@@ -20,14 +21,16 @@ from server.sentinel_environment import SentinelEnvironment
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global environment instance
+# Global environment instance and lock for thread safety
 env: Optional[SentinelEnvironment] = None
+env_lock: Optional[asyncio.Lock] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global env
+    global env, env_lock
     env = SentinelEnvironment()
+    env_lock = asyncio.Lock()
     logger.info("Sentinel Environment initialized")
     yield
     logger.info("Sentinel Environment shutdown")
@@ -52,32 +55,34 @@ async def reset(
         task_name: basic-injection, social-engineering, or stealth-exfiltration
         seed: Random seed for reproducibility
     """
-    global env
-    try:
-        observation = env.reset(task_name=task_name, seed=seed)
-        return JSONResponse(content=observation.model_dump())
-    except Exception as e:
-        logger.error(f"reset() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    global env, env_lock
+    async with env_lock:
+        try:
+            observation = env.reset(task_name=task_name, seed=seed)
+            return JSONResponse(content=observation.model_dump())
+        except Exception as e:
+            logger.error(f"reset() failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/step")
 async def step(action: SentinelAction):
     """Execute one step in the current episode."""
-    global env
-    try:
-        observation, reward, done, info = env.step(action)
-        return JSONResponse(content={
-            "observation": observation.model_dump(),
-            "reward": reward,
-            "done": done,
-            "info": info,
-        })
-    except RuntimeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"step() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    global env, env_lock
+    async with env_lock:
+        try:
+            observation, reward, done, info = env.step(action)
+            return JSONResponse(content={
+                "observation": observation.model_dump(),
+                "reward": reward,
+                "done": done,
+                "info": info,
+            })
+        except RuntimeError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"step() failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/state")

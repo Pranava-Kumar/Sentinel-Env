@@ -29,8 +29,8 @@ def compute_reward(
     result = grade_step(action.classification, ground_truth, action.reasoning)
     reward = result["reward"]
 
-    # Small penalty for dragging on when episode should end
-    if step_number >= max_steps - 1:
+    # Small penalty for incorrect action at end of episode (not for correct actions)
+    if step_number >= max_steps - 1 and not result.get("is_correct", False):
         reward -= 0.05
 
     return round(max(min(reward, 1.0), 0.0), 2)

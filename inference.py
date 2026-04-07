@@ -208,7 +208,8 @@ async def run_task(task_name: str, seed: int = 42) -> dict:
             grade_result = response.json()
             score = grade_result.get("score", 0.0)
         except Exception:
-            score = sum(rewards) / max(len(rewards) * 0.6, 1) if rewards else 0.0
+            # Fallback: average per-step reward, clamped to [0.0, 1.0]
+            score = min(sum(rewards) / max(len(rewards), 1), 1.0) if rewards else 0.0
 
         success = score >= 0.3
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)

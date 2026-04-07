@@ -114,10 +114,7 @@ class SentinelEnvironment:
         done = self.step_count >= self.max_steps
 
         # Build next observation
-        if not done:
-            observation = self._build_observation()
-        else:
-            observation = self._build_observation()
+        observation = self._build_observation()
 
         info = {
             "step_result": step_result,
@@ -158,7 +155,15 @@ class SentinelEnvironment:
 
     def _build_observation(self) -> SentinelObservation:
         """Build the current observation from the attack sequence."""
-        if self.step_count < len(self.attack_sequence):
+        if not self.attack_sequence:
+            self.current_attack = {
+                "text": "",
+                "ground_truth": "safe",
+                "is_attack": False,
+                "attack_type": "none",
+                "difficulty": "unknown",
+            }
+        elif self.step_count < len(self.attack_sequence):
             self.current_attack = self.attack_sequence[self.step_count]
         else:
             self.current_attack = self.attack_sequence[-1]
