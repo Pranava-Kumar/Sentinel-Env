@@ -12,6 +12,7 @@ docs/
 CLAUDE.md
 GEMINI.md
 AGENTS.md
+QWEN.md
 .plan.md
 *.plan
 conductor/

@@ -9,6 +9,7 @@ Implements OpenEnv-compatible endpoints:
 
 import logging
 import asyncio
+import hmac
 import os
 from contextlib import asynccontextmanager
 
@@ -42,7 +43,7 @@ episode_manager = EpisodeManager(max_episodes=1000, ttl_seconds=3600)
 
 async def verify_api_key(x_api_key: str = Header(None)):
     """Verify the API key from X-API-Key header."""
-    if SENTINEL_API_KEY and x_api_key != SENTINEL_API_KEY:
+    if SENTINEL_API_KEY and not hmac.compare_digest(x_api_key, SENTINEL_API_KEY):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
@@ -76,10 +77,8 @@ async def reset(
         seed: Random seed for reproducibility
     """
     try:
-        episode_id = episode_manager.create_episode(task_name=task_name, seed=seed)
-        env = episode_manager.get_episode(episode_id)
-        observation = env.reset(task_name=task_name, seed=seed)
-        
+        episode_id, observation = episode_manager.create_episode(task_name=task_name, seed=seed)
+
         response_data = observation.model_dump()
         response_data["episode_id"] = episode_id
         return JSONResponse(content=response_data)

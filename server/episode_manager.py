@@ -5,7 +5,7 @@ Manages multiple simultaneous episodes with session-based tracking.
 
 import uuid
 import time
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 from server.sentinel_environment import SentinelEnvironment
 
 
@@ -22,32 +22,32 @@ class EpisodeManager:
         self.episodes: Dict[str, SentinelEnvironment] = {}
         self.episode_metadata: Dict[str, dict] = {}
     
-    def create_episode(self, task_name: str, seed: int) -> str:
-        """Create a new episode and return its ID.
-        
+    def create_episode(self, task_name: str, seed: int) -> Tuple[str, Any]:
+        """Create a new episode and return its ID with the initial observation.
+
         Args:
             task_name: Task name for the episode
             seed: Random seed
-            
+
         Returns:
-            Episode ID (UUID string)
+            Tuple of (episode_id, initial_observation)
         """
         # Evict old episodes if at capacity
         if len(self.episodes) >= self.max_episodes:
             self._evict_old_episodes()
-        
+
         episode_id = str(uuid.uuid4())
         env = SentinelEnvironment()
-        env.reset(task_name=task_name, seed=seed)
-        
+        observation = env.reset(task_name=task_name, seed=seed)
+
         self.episodes[episode_id] = env
         self.episode_metadata[episode_id] = {
             "created_at": time.time(),
             "task_name": task_name,
             "seed": seed,
         }
-        
-        return episode_id
+
+        return episode_id, observation
     
     def get_episode(self, episode_id: str) -> Optional[SentinelEnvironment]:
         """Get an episode by ID.

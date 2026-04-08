@@ -13,6 +13,9 @@ from models import (
     ResilienceMetrics,
 )
 from server.attack_engine import generate_attack_sequence, EPISODE_LENGTHS
+from server.reward_shaper import compute_reward
+from server.grader import grade_step, grade_episode
+from server.resilience_profile import generate_resilience_profile
 
 
 class SentinelEnvironment:
@@ -111,7 +114,6 @@ class SentinelEnvironment:
             Tuple of (step_result dict, reward float)
         """
         # Compute reward
-        from server.reward_shaper import compute_reward
         reward = compute_reward(
             action,
             ground_truth,
@@ -134,7 +136,6 @@ class SentinelEnvironment:
         }
 
         # Enrich with grader result
-        from server.grader import grade_step
         grade_result = grade_step(action.classification, ground_truth, action.reasoning)
         step_result.update(grade_result)
         self.episode_results.append(step_result)
@@ -175,12 +176,10 @@ class SentinelEnvironment:
 
     def get_episode_grade(self) -> Dict[str, Any]:
         """Grade the completed episode."""
-        from server.grader import grade_episode
         return grade_episode(self.episode_results)
 
     def get_resilience_profile(self) -> Dict[str, Any]:
         """Generate resilience profile for completed episode."""
-        from server.resilience_profile import generate_resilience_profile
         return generate_resilience_profile(
             self.episode_results,
             self.task_name or "unknown",

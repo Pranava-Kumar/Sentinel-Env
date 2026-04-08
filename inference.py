@@ -196,7 +196,7 @@ async def main() -> None:
         env = await SentinelEnv.from_docker_image(LOCAL_IMAGE_NAME)
     elif BASE_URL:
         env = SentinelEnv(base_url=BASE_URL)
-        await env.client.__aenter__()
+        await env.__aenter__()
     else:
         raise ValueError("Either LOCAL_IMAGE_NAME or BASE_URL must be set")
 

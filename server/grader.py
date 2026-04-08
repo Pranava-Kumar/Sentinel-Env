@@ -11,10 +11,11 @@ from typing import List, Dict, Any
 from models import ThreatCategory, THREAT_SUPERCLASSES
 
 # Reverse map: category -> superclass name
-CATEGORY_TO_SUPERCLASS = {}
-for sc_name, categories in THREAT_SUPERCLASSES.items():
-    for cat in categories:
-        CATEGORY_TO_SUPERCLASS[cat.value] = sc_name
+CATEGORY_TO_SUPERCLASS = {
+    cat.value: sc_name
+    for sc_name, categories in THREAT_SUPERCLASSES.items()
+    for cat in categories
+}
 
 
 def _same_superclass(pred: ThreatCategory, actual: str) -> bool:
