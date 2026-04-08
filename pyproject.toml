@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "sentinel-env"
 version = "1.0.0"
 description = "AI Agent Safety & Jailbreak Detection Environment"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "openai>=1.0.0",
     "pydantic>=2.0.0",
@@ -19,14 +19,18 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    # Core dev tools
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    "pytest-cov>=5.0",
+    "coverage>=7.0",
     "ruff>=0.15.0",
     "mypy>=1.20.0",
     "bandit>=1.9.0",
     "pre-commit>=4.5.0",
     "hypothesis>=6.150.0",
     "structlog>=25.5.0",
+    # Observability
     "opentelemetry-api",
     "opentelemetry-sdk",
     "opentelemetry-instrumentation-fastapi",
@@ -34,9 +38,31 @@ dev = [
     "wandb>=0.25.0",
     "sentry-sdk>=2.57.0",
     "prometheus-client>=0.24.0",
-    # hud-python and garak require Python 3.11+ (installed separately)
-    # "hud-python>=0.5.0",
-    # "garak>=0.14.0",
+    # LLM security testing
+    "garak>=0.14.0",
+    "hud-python>=0.5.0",
+    "litellm>=1.82.0",
+    # LLM/ML dependencies (required by garak, hud, etc.)
+    "transformers>=5.5.0",
+    "torch>=2.11.0",
+    "accelerate>=1.13.0",
+    "sentencepiece>=0.2.0",
+    "safetensors>=0.7.0",
+    "tokenizers>=0.22.0",
+    "tiktoken>=0.12.0",
+    "datasets>=3.6.0",
+    "langchain>=1.2.0",
+    "langchain-core>=1.2.0",
+    "langgraph>=1.1.0",
+    "langsmith>=0.7.0",
+    "cohere>=5.21.0",
+    "mistralai>=1.5.0",
+    "ollama>=0.6.0",
+    "replicate>=1.0.0",
+    "deepl>=1.17.0",
+    "google-cloud-translate>=3.25.0",
+    "nltk>=3.9.0",
+    "networkx>=3.6.0",
 ]
 
 [project.scripts]
