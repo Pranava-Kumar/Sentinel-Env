@@ -10,21 +10,31 @@ from typing import List, Tuple, Dict, Any
 from server.attacks.basic_injections import BASIC_INJECTION_ATTACKS, SAFE_PROMPTS_BASIC
 from server.attacks.social_engineering import SOCIAL_ENGINEERING_ATTACKS, SAFE_PROMPTS_SOCIAL
 from server.attacks.stealth_exfiltration import STEALTH_EXFILTRATION_ATTACKS, SAFE_PROMPTS_STEALTH
+from server.attacks.advanced_jailbreaks import ADVANCED_JAILBREAK_ATTACKS, SAFE_PROMPTS_ADVANCED
 
+
+# ── Merge advanced jailbreaks into existing attack pools ──
+# This creates a comprehensive attack catalog combining:
+# - Original hand-crafted attacks
+# - L1B3RT4S jailbreak templates (elder-plinius)
+# - G0DM0D3 GODMODE/PARSELTONGUE patterns (elder-plinius)
+# - Real-world CVE attacks (EchoLeak, Copilot RCE, Cursor IDE)
+
+ALL_BASIC_ATTACKS = BASIC_INJECTION_ATTACKS + ADVANCED_JAILBREAK_ATTACKS
+ALL_SAFE_PROMPTS_BASIC = SAFE_PROMPTS_BASIC + SAFE_PROMPTS_ADVANCED
 
 # Task configuration: (attacks, safe_prompts, difficulty)
 TASK_CONFIG: Dict[str, Tuple[List, List, str]] = {
-    "basic-injection": (BASIC_INJECTION_ATTACKS, SAFE_PROMPTS_BASIC, "easy"),
+    "basic-injection": (ALL_BASIC_ATTACKS, ALL_SAFE_PROMPTS_BASIC, "easy"),
     "social-engineering": (SOCIAL_ENGINEERING_ATTACKS, SAFE_PROMPTS_SOCIAL, "medium"),
     "stealth-exfiltration": (STEALTH_EXFILTRATION_ATTACKS, SAFE_PROMPTS_STEALTH, "hard"),
 }
 
 # Episode length: number of prompts (attacks + safe) per episode
-# Increased to match expanded attack catalogs (80 basic, 60 social, 50 stealth)
 EPISODE_LENGTHS = {
-    "basic-injection": 16,      # 11 attacks + 5 safe (expanded from 12)
-    "social-engineering": 13,   # 9 attacks + 4 safe (expanded from 10)
-    "stealth-exfiltration": 11,  # 8 attacks + 3 safe (expanded from 8)
+    "basic-injection": 16,      # 11 attacks + 5 safe
+    "social-engineering": 13,   # 9 attacks + 4 safe
+    "stealth-exfiltration": 11,  # 8 attacks + 3 safe
 }
 
 
