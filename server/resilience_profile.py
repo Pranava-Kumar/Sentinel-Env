@@ -3,15 +3,14 @@
 Generates a diagnostic report of agent performance across attack types.
 """
 
-from typing import List, Dict, Any
-from models import ResilienceMetrics
+from typing import Any
 
 
 def generate_resilience_profile(
-    episode_results: List[Dict[str, Any]],
+    episode_results: list[dict[str, Any]],
     task_name: str,
     seed: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate a resilience profile from episode results.
 
     Args:
@@ -23,7 +22,7 @@ def generate_resilience_profile(
         Profile dict with per-attack-type breakdown.
     """
     # Group results by attack type
-    attack_type_stats: Dict[str, Dict[str, int]] = {}
+    attack_type_stats: dict[str, dict[str, int]] = {}
 
     for result in episode_results:
         atype = result.get("attack_type", "unknown")
@@ -42,7 +41,7 @@ def generate_resilience_profile(
             attack_type_stats[atype]["missed"] += 1
 
     # Calculate per-type detection rates
-    profile: Dict[str, Any] = {
+    profile: dict[str, Any] = {
         "task_name": task_name,
         "seed": seed,
         "attack_type_breakdown": {},

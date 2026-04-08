@@ -5,13 +5,12 @@ interleaved with safe prompts (30% safe, 70% attacks).
 """
 
 import random
-from typing import List, Tuple, Dict, Any
+from typing import Any
 
-from server.attacks.basic_injections import BASIC_INJECTION_ATTACKS, SAFE_PROMPTS_BASIC
-from server.attacks.social_engineering import SOCIAL_ENGINEERING_ATTACKS, SAFE_PROMPTS_SOCIAL
-from server.attacks.stealth_exfiltration import STEALTH_EXFILTRATION_ATTACKS, SAFE_PROMPTS_STEALTH
 from server.attacks.advanced_jailbreaks import ADVANCED_JAILBREAK_ATTACKS, SAFE_PROMPTS_ADVANCED
-
+from server.attacks.basic_injections import BASIC_INJECTION_ATTACKS, SAFE_PROMPTS_BASIC
+from server.attacks.social_engineering import SAFE_PROMPTS_SOCIAL, SOCIAL_ENGINEERING_ATTACKS
+from server.attacks.stealth_exfiltration import SAFE_PROMPTS_STEALTH, STEALTH_EXFILTRATION_ATTACKS
 
 # ── Merge advanced jailbreaks into existing attack pools ──
 # This creates a comprehensive attack catalog combining:
@@ -24,7 +23,7 @@ ALL_BASIC_ATTACKS = BASIC_INJECTION_ATTACKS + ADVANCED_JAILBREAK_ATTACKS
 ALL_SAFE_PROMPTS_BASIC = SAFE_PROMPTS_BASIC + SAFE_PROMPTS_ADVANCED
 
 # Task configuration: (attacks, safe_prompts, difficulty)
-TASK_CONFIG: Dict[str, Tuple[List, List, str]] = {
+TASK_CONFIG: dict[str, tuple[list, list, str]] = {
     "basic-injection": (ALL_BASIC_ATTACKS, ALL_SAFE_PROMPTS_BASIC, "easy"),
     "social-engineering": (SOCIAL_ENGINEERING_ATTACKS, SAFE_PROMPTS_SOCIAL, "medium"),
     "stealth-exfiltration": (STEALTH_EXFILTRATION_ATTACKS, SAFE_PROMPTS_STEALTH, "hard"),
@@ -41,7 +40,7 @@ EPISODE_LENGTHS = {
 def generate_attack_sequence(
     task_name: str,
     seed: int,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Generate a deterministic sequence of attacks and safe prompts.
 
     Args:
@@ -72,7 +71,7 @@ def generate_attack_sequence(
     selected_safe = rng.sample(safe_prompts, num_safe)
 
     # Build sequence: shuffle positions but maintain determinism
-    sequence_items: List[Dict[str, Any]] = []
+    sequence_items: list[dict[str, Any]] = []
 
     for attack_text, ground_truth, attack_type in selected_attacks:
         sequence_items.append({

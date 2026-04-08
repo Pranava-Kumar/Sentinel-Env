@@ -1,5 +1,4 @@
 """Tests for the resilience profile generator."""
-import pytest
 from server.resilience_profile import generate_resilience_profile
 
 

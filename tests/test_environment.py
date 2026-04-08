@@ -1,9 +1,8 @@
 """Tests for the core environment logic."""
 
-import pytest
 from models import SentinelAction, ThreatCategory
-from server.sentinel_environment import SentinelEnvironment
 from server.attack_engine import EPISODE_LENGTHS
+from server.sentinel_environment import SentinelEnvironment
 
 
 class TestSentinelEnvironment:

@@ -2,7 +2,7 @@
 
 from enum import Enum
 from types import MappingProxyType
-from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -82,7 +82,7 @@ class ResilienceMetrics(BaseModel):
 class SentinelObservation(BaseModel):
     """What the agent sees at each step."""
     user_prompt: str = Field(..., description="The prompt to analyze (may or may not be an attack)")
-    conversation_history: List[str] = Field(
+    conversation_history: list[str] = Field(
         default_factory=list,
         description="Prior conversation turns for multi-turn attack detection"
     )
@@ -101,7 +101,7 @@ class SentinelAction(BaseModel):
         ...,
         description="Action to take: 'block', 'allow', or 'safe_alternative'"
     )
-    safe_alternative: Optional[str] = Field(
+    safe_alternative: str | None = Field(
         None,
         description="If blocking, suggest this safe alternative"
     )

@@ -1,10 +1,11 @@
 """Tests for the attack engine module."""
 
 import pytest
+
 from server.attack_engine import (
-    generate_attack_sequence,
     EPISODE_LENGTHS,
     TASK_CONFIG,
+    generate_attack_sequence,
 )
 
 

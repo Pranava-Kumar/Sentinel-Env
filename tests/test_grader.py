@@ -1,8 +1,7 @@
 """Tests for the grader module."""
 
-import pytest
 from models import ThreatCategory
-from server.grader import grade_step, grade_episode
+from server.grader import grade_episode, grade_step
 
 
 class TestGradeStep:

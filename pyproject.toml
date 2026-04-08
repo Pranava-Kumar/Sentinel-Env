@@ -21,6 +21,17 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    "ruff>=0.15.0",
+    "mypy>=1.20.0",
+    "bandit>=1.9.0",
+    "pre-commit>=4.5.0",
+    "hypothesis>=6.150.0",
+    "structlog>=25.5.0",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-exporter-prometheus",
+    "wandb>=0.25.0",
 ]
 
 [project.scripts]
@@ -29,3 +40,71 @@ server = "server.app:main"
 
 [tool.uv]
 managed = true
+
+# ── Ruff Configuration ──────────────────────────────────────────────
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "tools/",
+    "docs/",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # bugbear
+    "SIM",   # simplify
+    "RUF",   # ruff-specific
+]
+ignore = [
+    "E501",  # line length (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults (FastAPI uses this)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLR2004", "RUF059"]  # Allow asserts, magic values, unused unpacks
+"inference.py" = ["T201", "RUF059", "SIM105"]  # Allow print, unused unpacks
+"server/attacks/*" = ["RUF001"]  # Unicode homoglyphs are intentional for jailbreak attacks
+"server/__init__.py" = ["N999"]  # Module naming from parent dir
+"tests/__init__.py" = ["N999"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# ── MyPy Configuration ──────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+exclude = ["^tests/", "^tools/", "^scripts/"]
+
+[[tool.mypy.overrides]]
+module = ["server.attacks.*", "openenv_core"]
+ignore_missing_imports = true
+
+# ── Bandit Configuration ────────────────────────────────────────────
+[tool.bandit]
+exclude_dirs = ["tests", "tools", "scripts"]
+skips = ["B101", "B601"]  # Allow assert, skip paramiko calls
+
+# ── Pytest Configuration ────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"

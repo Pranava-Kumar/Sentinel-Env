@@ -1,6 +1,5 @@
 """Tests for the reward shaper module."""
 
-import pytest
 from models import SentinelAction, ThreatCategory
 from server.reward_shaper import compute_reward
 

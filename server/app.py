@@ -7,19 +7,17 @@ Implements OpenEnv-compatible endpoints:
 - GET  /health — Health check
 """
 
-import logging
-import asyncio
 import hmac
+import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from models import SentinelAction, SentinelObservation, SentinelState
-from server.sentinel_environment import SentinelEnvironment
-from server.rate_limiter import RateLimiter
+from models import SentinelAction
 from server.episode_manager import EpisodeManager
+from server.rate_limiter import RateLimiter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -98,11 +96,11 @@ async def step(
     """Execute one step in the current episode."""
     if not episode_id:
         raise HTTPException(status_code=400, detail="X-Episode-ID header required")
-    
+
     env = episode_manager.get_episode(episode_id)
     if env is None:
         raise HTTPException(status_code=404, detail="Episode not found")
-    
+
     try:
         observation, reward, done, info = env.step(action)
         return JSONResponse(content={
@@ -126,11 +124,11 @@ async def state(
     """Get current episode state."""
     if not episode_id:
         raise HTTPException(status_code=400, detail="X-Episode-ID header required")
-    
+
     env = episode_manager.get_episode(episode_id)
     if env is None:
         raise HTTPException(status_code=404, detail="Episode not found")
-    
+
     try:
         state = env.state()
         return JSONResponse(content=state.model_dump())
@@ -157,11 +155,11 @@ async def grade(
     """Grade the current episode (helper endpoint)."""
     if not episode_id:
         raise HTTPException(status_code=400, detail="X-Episode-ID header required")
-    
+
     env = episode_manager.get_episode(episode_id)
     if env is None:
         raise HTTPException(status_code=404, detail="Episode not found")
-    
+
     try:
         result = env.get_episode_grade()
         return JSONResponse(content=result)
@@ -178,11 +176,11 @@ async def resilience_profile(
     """Get resilience profile for current episode (helper endpoint)."""
     if not episode_id:
         raise HTTPException(status_code=400, detail="X-Episode-ID header required")
-    
+
     env = episode_manager.get_episode(episode_id)
     if env is None:
         raise HTTPException(status_code=404, detail="Episode not found")
-    
+
     try:
         profile = env.get_resilience_profile()
         return JSONResponse(content=profile)

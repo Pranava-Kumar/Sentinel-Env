@@ -4,22 +4,18 @@ Tests every requirement: real-world tasks, OpenEnv spec compliance,
 grading, rewards, determinism, and edge cases.
 """
 
-import pytest
 from models import (
+    AttackMetadata,
+    RecommendedAction,
+    ResilienceMetrics,
     SentinelAction,
     SentinelObservation,
     SentinelState,
-    AttackMetadata,
-    ResilienceMetrics,
     ThreatCategory,
-    RecommendedAction,
 )
+from server.attack_engine import EPISODE_LENGTHS, TASK_CONFIG, generate_attack_sequence
+from server.grader import grade_episode
 from server.sentinel_environment import SentinelEnvironment
-from server.grader import grade_step, grade_episode
-from server.reward_shaper import compute_reward
-from server.attack_engine import generate_attack_sequence, EPISODE_LENGTHS, TASK_CONFIG
-from server.resilience_profile import generate_resilience_profile
-
 
 # ── Requirement: Real-world task simulation ─────────────────────────────
 

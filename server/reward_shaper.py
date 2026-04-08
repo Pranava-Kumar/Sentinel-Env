@@ -4,7 +4,6 @@ Called by the environment on each step to compute the reward signal.
 Delegates to grader.grade_step() for consistency.
 """
 
-from typing import Dict, Any
 from models import SentinelAction
 from server.grader import grade_step
 

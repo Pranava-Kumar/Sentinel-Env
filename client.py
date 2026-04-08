@@ -3,8 +3,8 @@
 Wraps HTTP/WebSocket communication with the server following OpenEnv conventions.
 """
 
-import asyncio
-from typing import Optional, Tuple, Dict, Any
+from typing import Any
+
 import httpx
 
 from models import SentinelAction, SentinelObservation, SentinelState
@@ -15,7 +15,7 @@ class SentinelEnv:
 
     def __init__(self, base_url: str = "http://localhost:7860"):
         self.base_url = base_url.rstrip("/")
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def __aenter__(self):
         try:
@@ -45,7 +45,7 @@ class SentinelEnv:
         response.raise_for_status()
         return SentinelObservation(**response.json())
 
-    async def step(self, action: SentinelAction) -> Tuple[SentinelObservation, float, bool, Dict[str, Any]]:
+    async def step(self, action: SentinelAction) -> tuple[SentinelObservation, float, bool, dict[str, Any]]:
         """Execute one step."""
         if self.client is None:
             raise RuntimeError("Client not initialized.")
@@ -73,7 +73,7 @@ class SentinelEnv:
     @classmethod
     async def from_docker_image(
         cls,
-        image_name: Optional[str] = None,
+        image_name: str | None = None,
         port: int = 7860,
     ) -> "SentinelEnv":
         """Create client connected to a docker-based environment."""

@@ -1,10 +1,12 @@
 """Tests for the SentinelEnv client."""
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-import httpx
-from models import SentinelAction, SentinelObservation, SentinelState, ThreatCategory
+
 from client import SentinelEnv
+from models import SentinelAction, SentinelObservation, SentinelState, ThreatCategory
 
 
 class TestSentinelEnv:

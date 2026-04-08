@@ -6,8 +6,7 @@ Uses collections.deque for O(1) popleft operations.
 """
 
 import time
-from collections import OrderedDict
-from typing import Dict, Deque
+from collections import OrderedDict, deque
 
 
 class RateLimiter:
@@ -28,8 +27,8 @@ class RateLimiter:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.max_entries = max_entries
-        self.requests: Dict[str, Deque[float]] = OrderedDict()
-    
+        self.requests: dict[str, deque[float]] = OrderedDict()
+
     async def check_rate_limit(self, client_ip: str) -> bool:
         """Check if request is within rate limit.
 
@@ -66,7 +65,7 @@ class RateLimiter:
             self.requests.popitem(last=False)
 
         return True
-    
+
     def cleanup(self) -> int:
         """Remove all expired entries. Call periodically.
         
@@ -76,16 +75,16 @@ class RateLimiter:
         now = time.time()
         window_start = now - self.window_seconds
         cleaned = 0
-        
+
         empty_ips = []
         for ip, timestamps in self.requests.items():
             while timestamps and timestamps[0] < window_start:
                 timestamps.popleft()
             if not timestamps:
                 empty_ips.append(ip)
-        
+
         for ip in empty_ips:
             del self.requests[ip]
             cleaned += 1
-        
+
         return cleaned

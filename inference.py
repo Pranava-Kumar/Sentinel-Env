@@ -50,13 +50,12 @@ import logging
 import os
 import textwrap
 import traceback
-from typing import List, Optional
 
 from openai import OpenAI
 
-from models import SentinelAction, ThreatCategory
 from client import SentinelEnv
-from inference_logging import log_start, log_step, log_end
+from inference_logging import log_end, log_start, log_step
+from models import SentinelAction, ThreatCategory
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +159,7 @@ def parse_model_response(response_text: str) -> SentinelAction:
         logger.warning(f"Failed to parse model response: {e}")
         return SentinelAction(
             classification=ThreatCategory.SAFE,
-            reasoning=f"Parse error: {str(e)}",
+            reasoning=f"Parse error: {e!s}",
             recommended_action="allow",
         )
 
@@ -184,7 +183,7 @@ def get_model_response(client: OpenAI, step: int, user_prompt: str, attack_metad
         logger.error(f"LLM API call failed: {exc}")
         return SentinelAction(
             classification=ThreatCategory.SAFE,
-            reasoning=f"Error: {str(exc)}",
+            reasoning=f"Error: {exc!s}",
             recommended_action="allow",
         )
 
@@ -200,12 +199,12 @@ async def main() -> None:
     else:
         raise ValueError("Either LOCAL_IMAGE_NAME or BASE_URL must be set")
 
-    history: List[str] = []
-    rewards: List[float] = []
+    history: list[str] = []
+    rewards: list[float] = []
     steps_taken = 0
     score = 0.0
     success = False
-    last_error: Optional[str] = None
+    last_error: str | None = None
 
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 

@@ -4,32 +4,33 @@ Implements reset(), step(), state() following OpenEnv conventions.
 """
 
 import uuid
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
+
 from models import (
+    AttackMetadata,
+    ResilienceMetrics,
     SentinelAction,
     SentinelObservation,
     SentinelState,
-    AttackMetadata,
-    ResilienceMetrics,
 )
-from server.attack_engine import generate_attack_sequence, EPISODE_LENGTHS
-from server.reward_shaper import compute_reward
-from server.grader import grade_step, grade_episode
+from server.attack_engine import EPISODE_LENGTHS, generate_attack_sequence
+from server.grader import grade_episode, grade_step
 from server.resilience_profile import generate_resilience_profile
+from server.reward_shaper import compute_reward
 
 
 class SentinelEnvironment:
     """The core RL environment for agent safety evaluation."""
 
     def __init__(self):
-        self.episode_id: Optional[str] = None
-        self.task_name: Optional[str] = None
+        self.episode_id: str | None = None
+        self.task_name: str | None = None
         self.seed: int = 0
         self.step_count: int = 0
         self.max_steps: int = 10
-        self.attack_sequence: List[Dict[str, Any]] = []
-        self.episode_results: List[Dict[str, Any]] = []
-        self.current_attack: Optional[Dict[str, Any]] = None
+        self.attack_sequence: list[dict[str, Any]] = []
+        self.episode_results: list[dict[str, Any]] = []
+        self.current_attack: dict[str, Any] | None = None
         self.attacks_correctly_detected: int = 0
         self.false_positives: int = 0
         self.total_attacks_presented: int = 0
@@ -72,7 +73,7 @@ class SentinelEnvironment:
 
         return self._build_observation()
 
-    def step(self, action: SentinelAction) -> Tuple[SentinelObservation, float, bool, Dict[str, Any]]:
+    def step(self, action: SentinelAction) -> tuple[SentinelObservation, float, bool, dict[str, Any]]:
         """Execute one step in the episode.
 
         Args:
@@ -103,7 +104,7 @@ class SentinelEnvironment:
 
         return observation, reward, done, info
 
-    def _process_step(self, action: SentinelAction, ground_truth: str) -> Tuple[Dict[str, Any], float]:
+    def _process_step(self, action: SentinelAction, ground_truth: str) -> tuple[dict[str, Any], float]:
         """Process step: compute reward, grade, update metrics.
 
         Args:
@@ -174,11 +175,11 @@ class SentinelEnvironment:
             done=self.step_count >= self.max_steps,
         )
 
-    def get_episode_grade(self) -> Dict[str, Any]:
+    def get_episode_grade(self) -> dict[str, Any]:
         """Grade the completed episode."""
         return grade_episode(self.episode_results)
 
-    def get_resilience_profile(self) -> Dict[str, Any]:
+    def get_resilience_profile(self) -> dict[str, Any]:
         """Generate resilience profile for completed episode."""
         return generate_resilience_profile(
             self.episode_results,

@@ -17,6 +17,9 @@ QWEN.md
 *.plan
 conductor/
 
+# ── External Tools (Cloned repos, binaries) ───────────────
+tools/
+
 # ── Jailbreak Research & Attack Patterns (Core IP) ────────
 # Our proprietary jailbreak patterns, research, and attack data
 jailbreak-prompts/

@@ -1,8 +1,8 @@
 """Tests for the FastAPI server endpoints."""
+
 import pytest
-import os
 from fastapi.testclient import TestClient
-from models import ThreatCategory
+
 from server.app import app
 
 

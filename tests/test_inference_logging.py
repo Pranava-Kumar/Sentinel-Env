@@ -1,8 +1,8 @@
 """Tests for inference logging format compliance."""
-import re
-from inference_logging import log_start, log_step, log_end
-from io import StringIO
 import sys
+from io import StringIO
+
+from inference_logging import log_end, log_start, log_step
 
 
 def capture_print(func, *args, **kwargs):

@@ -7,8 +7,9 @@ Grades agent performance on a 0.0-1.0 scale based on:
 """
 
 import re
-from typing import List, Dict, Any
-from models import ThreatCategory, THREAT_SUPERCLASSES
+from typing import Any
+
+from models import THREAT_SUPERCLASSES, ThreatCategory
 
 # Reverse map: category -> superclass name
 CATEGORY_TO_SUPERCLASS = {
@@ -70,7 +71,7 @@ def grade_step(
     prediction: ThreatCategory,
     ground_truth: str,
     reasoning: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Grade a single step.
 
     Returns dict with reward, is_correct, is_partial, is_missed, is_false_positive.
@@ -113,7 +114,7 @@ def grade_step(
     }
 
 
-def grade_episode(episode_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def grade_episode(episode_results: list[dict[str, Any]]) -> dict[str, Any]:
     """Grade a completed episode.
 
     Args:

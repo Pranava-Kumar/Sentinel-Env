@@ -1,7 +1,9 @@
 """Tests for the episode manager module."""
 
-import pytest
 import time
+
+import pytest
+
 from server.episode_manager import EpisodeManager
 
 
