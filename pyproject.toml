@@ -32,6 +32,11 @@ dev = [
     "opentelemetry-instrumentation-fastapi",
     "opentelemetry-exporter-prometheus",
     "wandb>=0.25.0",
+    "sentry-sdk>=2.57.0",
+    "prometheus-client>=0.24.0",
+    # hud-python and garak require Python 3.11+ (installed separately)
+    # "hud-python>=0.5.0",
+    # "garak>=0.14.0",
 ]
 
 [project.scripts]
