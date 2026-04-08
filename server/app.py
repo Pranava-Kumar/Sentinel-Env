@@ -175,3 +175,23 @@ async def resilience_profile(api_key: str = Depends(verify_api_key)):
         return JSONResponse(content=profile)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def main():
+    """Run the Sentinel Environment server."""
+    import uvicorn
+    
+    port = int(os.getenv("PORT", 7860))
+    host = os.getenv("HOST", "0.0.0.0")
+    
+    uvicorn.run(
+        "server.app:app",
+        host=host,
+        port=port,
+        log_level="info",
+        reload=False,
+    )
+
+
+if __name__ == "__main__":
+    main()
