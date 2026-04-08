@@ -58,6 +58,7 @@ files_to_copy = [
     "client.py",
     "openenv.yaml",
     "pyproject.toml",
+    "uv.lock",
     "__init__.py",
     "inference.py",
     "inference_logging.py",
