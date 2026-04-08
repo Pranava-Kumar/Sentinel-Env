@@ -1,0 +1,29 @@
+# Garak Configuration for Sentinel Environment
+# 
+# Usage:
+#   uv run garak --config garak_config.yaml
+#
+# Prerequisites:
+#   1. Set HF_TOKEN or OPENAI_API_KEY environment variable
+#   2. Ensure model is accessible via the configured endpoint
+
+system:
+  lite: true  # Run faster with fewer probes for initial scan
+  parallel_requests: 4
+  parallel_attempts: 4
+
+run:
+  seed: 42
+  gen_times: 1
+  probes: 1
+
+plugins:
+  model_type: openai
+  model_name: Qwen/Qwen2.5-72B-Instruct
+  extended_detectors: false
+
+generators:
+  openai:
+    model: Qwen/Qwen2.5-72B-Instruct
+    base_url: https://router.huggingface.co/v1
+    # Uses HF_TOKEN or OPENAI_API_KEY from environment

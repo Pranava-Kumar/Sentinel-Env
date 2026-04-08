@@ -194,7 +194,7 @@ def main():
     import uvicorn
 
     port = int(os.getenv("PORT", 7860))
-    host = os.getenv("HOST", "0.0.0.0")
+    host = os.getenv("HOST", "0.0.0.0")  # nosec B104 - required for container deployment
 
     uvicorn.run(
         "server.app:app",
