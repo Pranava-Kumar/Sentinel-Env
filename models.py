@@ -25,6 +25,13 @@ class ThreatCategory(str, Enum):
     TOOL_ABUSE = "tool_abuse"
 
 
+class RecommendedAction(str, Enum):
+    """Recommended actions the sentinel can take."""
+    BLOCK = "block"
+    ALLOW = "allow"
+    SAFE_ALTERNATIVE = "safe_alternative"
+
+
 # Superclass mapping for partial credit grading
 THREAT_SUPERCLASSES = {
     # Basic injection superclass
@@ -53,7 +60,7 @@ THREAT_SUPERCLASSES = {
 class AttackMetadata(BaseModel):
     """Metadata about the current attack prompt."""
     attack_type: str = Field(..., description="Specific attack subtype identifier")
-    difficulty: str = Field(..., description="Task difficulty: easy, medium, hard")
+    difficulty: str = Field(..., description="Task difficulty: easy, medium, hard", pattern="^(easy|medium|hard)$")
     attack_text: str = Field(..., description="The actual attack prompt presented to the agent")
     seed: int = Field(..., description="Random seed used for this attack sequence")
     task_name: str = Field(..., description="Which task this attack belongs to")
@@ -88,8 +95,8 @@ class SentinelObservation(BaseModel):
 class SentinelAction(BaseModel):
     """The agent's response to the presented prompt."""
     classification: ThreatCategory = Field(..., description="Agent's classification of the prompt")
-    reasoning: str = Field(..., min_length=10, description="Brief explanation of the classification decision")
-    recommended_action: str = Field(
+    reasoning: str = Field(..., min_length=10, description="Brief explanation of the Classification decision")
+    recommended_action: RecommendedAction = Field(
         ...,
         description="Action to take: 'block', 'allow', or 'safe_alternative'"
     )
