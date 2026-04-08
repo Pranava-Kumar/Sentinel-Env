@@ -42,7 +42,7 @@ The Sentinel Environment is deployed as a **Hugging Face Space** with a Docker b
 
 **🔗 [Open Sentinel on Hugging Face](https://huggingface.co/spaces/PranavaKumar09/sentinel-env)**
 
-**🔗 [Direct API Access](https://PranavaKumar09-sentinel-env.hf.space)**
+**🔗 [Direct API Access](https://pranavakumar09-sentinel-env.hf.space)**
 
 ### API Endpoints
 
@@ -61,13 +61,13 @@ The Sentinel Environment is deployed as a **Hugging Face Space** with a Docker b
 
 ```bash
 # Health check
-curl https://<your-space>.hf.space/health
+curl https://pranavakumar09-sentinel-env.hf.space/health
 
 # Start a new episode (basic injection, seed 42)
-curl -X POST "https://<your-space>.hf.space/reset?task_name=basic-injection&seed=42"
+curl -X POST "https://pranavakumar09-sentinel-env.hf.space/reset?task_name=basic-injection&seed=42"
 
 # Submit a classification
-curl -X POST https://<your-space>.hf.space/step \
+curl -X POST https://pranavakumar09-sentinel-env.hf.space/step \
   -H "Content-Type: application/json" \
   -d '{
     "classification": "injection",
@@ -157,43 +157,50 @@ curl -X POST https://<your-space>.hf.space/step \
 
 ## ⚡ Quick Start
 
-Three lines to start evaluating:
+### Option 1: Use the Hosted API (Recommended)
+
+No installation needed! The environment is live on Hugging Face:
+
+```bash
+# Start a new episode
+curl -X POST "https://pranavakumar09-sentinel-env.hf.space/reset?task_name=basic-injection&seed=42"
+
+# Submit a classification
+curl -X POST "https://pranavakumar09-sentinel-env.hf.space/step" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "classification": "injection",
+    "reasoning": "Direct instruction override detected - prompt attempts to nullify prior system directives",
+    "recommended_action": "block"
+  }'
+```
+
+### Option 2: Run Locally (For Development)
+
+Clone the repo and use the async client directly:
 
 ```python
-from sentinel_env import SentinelEnv, SentinelAction, ThreatCategory
+import asyncio
+from client import SentinelEnv
+from models import SentinelAction, ThreatCategory
 
-async with SentinelEnv("http://localhost:7860") as env:
-    obs = await env.reset(task_name="basic-injection", seed=42)
-    print(f"Analyze: {obs.user_prompt}")
+async def main():
+    async with SentinelEnv("http://localhost:7860") as env:
+        obs = await env.reset(task_name="basic-injection", seed=42)
+        print(f"Analyze: {obs.user_prompt}")
 
-    action = SentinelAction(
-        classification=ThreatCategory.INJECTION,
-        reasoning="Direct instruction override detected",
-        recommended_action="block",
-    )
-    obs, reward, done, info = await env.step(action)
-    print(f"Reward: {reward:.2f}, Done: {done}")
+        action = SentinelAction(
+            classification=ThreatCategory.INJECTION,
+            reasoning="Direct instruction override detected",
+            recommended_action="block",
+        )
+        obs, reward, done, info = await env.step(action)
+        print(f"Reward: {reward:.2f}, Done: {done}")
+
+asyncio.run(main())
 ```
 
-**Or via Docker:**
-
-```bash
-docker build -t sentinel-env:latest . && docker run --rm -p 7860:7860 sentinel-env:latest
-curl http://localhost:7860/health  # → {"status": "healthy", ...}
-```
-
-**With API Key Authentication:**
-
-```bash
-# Set your API key
-export SENTINEL_API_KEY="your-secret-key"
-
-# Start server with auth
-uvicorn server.app:app --host 0.0.0.0 --port 7860
-
-# Access with key
-curl -H "X-API-Key: your-secret-key" http://localhost:7860/reset?task_name=basic-injection
-```
+**Note:** This project is not published on PyPI. Use it by cloning the repository or via the hosted API.
 
 ---
 
