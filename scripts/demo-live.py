@@ -131,19 +131,16 @@ obs = api_call("/reset?task_name=social-engineering&seed=42", "POST")
 for _ in range(20):
     if not obs.get('is_safe_prompt', True):
         break
-    result = api_call("/step", "POST", {
+    action_safe = {
         "classification": "safe",
         "reasoning": "This appears to be a legitimate and safe request with no malicious intent",
         "recommended_action": "allow",
-    })
+    }
+    result = api_call("/step", "POST", action_safe)
     if result.get('done'):
         obs = api_call("/reset?task_name=social-engineering&seed=42", "POST")
         break
-    obs, _, _, _ = api_call("/step", "POST", {
-        "classification": "safe",
-        "reasoning": "This appears to be a legitimate and safe request",
-        "recommended_action": "allow",
-    })
+    obs = result['observation']
     if obs.get('done'):
         obs = api_call("/reset?task_name=social-engineering&seed=42", "POST")
         break
