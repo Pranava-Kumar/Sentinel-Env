@@ -1,4 +1,68 @@
-# ── Secrets & Credentials ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+# SECRET SAUCE PROTECTION - Commercial IP Protection
+# ═══════════════════════════════════════════════════════════
+
+# ── AI Agent Planning & Strategy (Our Strategic Edge) ─────
+# Contains our strategic design decisions, architecture docs,
+# planning documents, and AI agent configurations
+docs/
+.agents/
+.qwen/
+.superpowers/
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+.plan.md
+*.plan
+conductor/
+
+# ── Jailbreak Research & Attack Patterns (Core IP) ────────
+# Our proprietary jailbreak patterns, research, and attack data
+jailbreak-prompts/
+L1B3RT4S/
+G0DM0D3/
+*.mkd
+*MOTHERLOAD*
+*SPECIAL_TOKENS*
+*SHORTCUTS*
+*RESEARCH*
+*ATTACK*
+
+# ── ML Models & Training (Proprietary Checkpoints) ────────
+# Our trained models, checkpoints, and weights
+models/
+checkpoints/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.onnx
+*.gguf
+training/
+fine-tuning/
+logs/
+tensorboard/
+wandb/
+mlflow/
+*.log
+*.out
+*.err
+
+# ── Generated Training Data (Curated Datasets) ────────────
+# Our curated datasets and training data
+data/
+datasets/
+*.parquet
+*.jsonl
+*.csv
+
+# ── Scripts & Utilities (Internal Tools) ──────────────────
+# Internal development and testing scripts
+scripts/
+tools/
+utils/
+
+# ── Secrets & Credentials ─────────────────────────────────
 .env
 .env.local
 .env.*
@@ -7,8 +71,23 @@
 *.pem
 secrets/
 credentials.json
+*.secret
+*secret*
+*credential*
 
-# ── Python ─────────────────────────────────────────────────────────────
+# ── Deployment Artifacts ──────────────────────────────────
+# Temporary deployment directories and artifacts
+hf-deploy/
+hf-space-deploy/
+deploy-temp/
+*.tar
+*.tar.gz
+
+# ═══════════════════════════════════════════════════════════
+# STANDARD IGNORE
+# ═══════════════════════════════════════════════════════════
+
+# ── Python ────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
@@ -32,86 +111,65 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# ── Virtual Environments ───────────────────────────────────────────────
+# ── Virtual Environments ──────────────────────────────────
 .venv/
 venv/
 ENV/
 env/
 
-# ── IDE & Editor ───────────────────────────────────────────────────────
+# ── IDE & Editor ──────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+*.sublime-*
 
-# ── AI Agent & Planning (Secret Sauce) ────────────────────────────────
-# These contain our strategic design decisions, architecture docs, and planning
-docs/
-.agents/
-.qwen/
-CLAUDE.md
-GEMINI.md
-AGENTS.md
-
-# ── Jailbreak Research (Secret Sauce - Real Attack Data) ─────────────
-jailbreak-prompts/
-L1B3RT4S/
-G0DM0D3/
-*.mkd
-*MOTHERLOAD*
-*SPECIAL_TOKENS*
-*SHORTCUTS*
-
-# ── ML Models & Training (Secret Sauce - Checkpoints & Weights) ──────
-models/
-checkpoints/
-*.pt
-*.pth
-*.safetensors
-*.bin
-*.onnx
-*.gguf
-training/
-logs/
-tensorboard/
-wandb/
-*.log
-*.out
-
-# ── Generated Training Data ──────────────────────────────────────────
-data/
-datasets/
-*.parquet
-*.jsonl
-
-# ── Container ──────────────────────────────────────────────────────────
-.dockerignore.local
-*.tar
-
-# ── OS ─────────────────────────────────────────────────────────────────
-Thumbs.db
-.DS_Store
-*.log
-
-# ── Testing ────────────────────────────────────────────────────────────
+# ── Testing ───────────────────────────────────────────────
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
 .nox/
+.hypothesis/
 
-# ── Temp & Backup ──────────────────────────────────────────────────────
+# ── Temp & Backup ─────────────────────────────────────────
 *.tmp
 *.bak
 *.backup
 *.orig
 *~
+*.swp
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# ── Hugging Face ───────────────────────────────────────────────────────
+# ── Hugging Face ──────────────────────────────────────────
 .huggingface/
 token
+hf_*.py
 
-# ── Git ────────────────────────────────────────────────────────────────
-.git/
+# ── Jupyter Notebooks (Output) ───────────────────────────
+.ipynb_checkpoints/
+
+# ── PyInstaller ──────────────────────────────────────────
+*.manifest
+*.spec
+
+# ── Installer ─────────────────────────────────────────────
+install.log
+install.txt
+
+# ── Container ─────────────────────────────────────────────
+.dockerignore.local
+
+# ── OS Files ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
