@@ -55,6 +55,37 @@ CLAUDE.md
 GEMINI.md
 AGENTS.md
 
+# ── Jailbreak Research (Secret Sauce - Real Attack Data) ─────────────
+jailbreak-prompts/
+L1B3RT4S/
+G0DM0D3/
+*.mkd
+*MOTHERLOAD*
+*SPECIAL_TOKENS*
+*SHORTCUTS*
+
+# ── ML Models & Training (Secret Sauce - Checkpoints & Weights) ──────
+models/
+checkpoints/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.onnx
+*.gguf
+training/
+logs/
+tensorboard/
+wandb/
+*.log
+*.out
+
+# ── Generated Training Data ──────────────────────────────────────────
+data/
+datasets/
+*.parquet
+*.jsonl
+
 # ── Container ──────────────────────────────────────────────────────────
 .dockerignore.local
 *.tar
