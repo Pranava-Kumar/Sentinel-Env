@@ -103,7 +103,7 @@ class TestSentinelEnv:
             recommended_action="block",
         )
         obs, reward, done, info = await env.step(action)
-        
+
         assert isinstance(obs, SentinelObservation)
         assert reward == 0.8
         assert done is False
@@ -171,3 +171,85 @@ class TestSentinelEnv:
         assert env.base_url == "http://localhost:8080"
         assert env.client is not None
         await env.close()
+
+
+class TestSentinelEnvContextManager:
+    @pytest.mark.asyncio
+    async def test_aenter_initializes_client(self):
+        """Async context manager should initialize httpx client."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value = mock_instance
+            async with SentinelEnv("http://localhost:7860") as env:
+                assert env.client is not None
+                assert env.client is mock_instance
+
+    @pytest.mark.asyncio
+    async def test_aexit_closes_client(self):
+        """Exiting context should close the client."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value = mock_instance
+            env = SentinelEnv("http://localhost:7860")
+            async with env:
+                pass
+            mock_instance.aclose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_methods_after_close(self):
+        """Methods should raise RuntimeError after client is closed."""
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value = mock_instance
+            env = SentinelEnv("http://localhost:7860")
+            async with env:
+                pass  # Client is now closed
+
+            with pytest.raises(RuntimeError, match="Client not initialized"):
+                await env.reset()
+
+
+class TestSentinelEnvErrorHandling:
+    @pytest.mark.asyncio
+    async def test_step_without_client_raises(self):
+        """Step should raise RuntimeError if client not initialized."""
+        env = SentinelEnv("http://localhost:7860")
+        action = SentinelAction(
+            classification=ThreatCategory.SAFE,
+            reasoning="Test reasoning",
+            recommended_action="allow",
+        )
+        with pytest.raises(RuntimeError, match="Client not initialized"):
+            await env.step(action)
+
+    @pytest.mark.asyncio
+    async def test_reset_without_client_raises(self):
+        """Reset should raise RuntimeError if client not initialized."""
+        env = SentinelEnv("http://localhost:7860")
+        with pytest.raises(RuntimeError, match="Client not initialized"):
+            await env.reset()
+
+    @pytest.mark.asyncio
+    async def test_state_without_client_raises(self):
+        """State should raise RuntimeError if client not initialized."""
+        env = SentinelEnv("http://localhost:7860")
+        with pytest.raises(RuntimeError, match="Client not initialized"):
+            await env.state()
+
+    @pytest.mark.asyncio
+    async def test_from_docker_image_creates_client(self):
+        """from_docker_image should create and return a client."""
+        env = await SentinelEnv.from_docker_image(port=7860)
+        try:
+            assert env.client is not None
+            assert isinstance(env.client, httpx.AsyncClient)
+        finally:
+            await env.close()
+
+    @pytest.mark.asyncio
+    async def test_close_is_idempotent(self):
+        """Calling close multiple times should not raise."""
+        env = SentinelEnv("http://localhost:7860")
+        await env.close()
+        await env.close()  # Should not raise
+
