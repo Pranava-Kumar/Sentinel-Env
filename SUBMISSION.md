@@ -19,38 +19,29 @@
 
 ---
 
-## 📋 WHAT YOU NEED TO DO (3 Steps)
+## 📋 WHAT YOU NEED TO DO (2 Steps)
 
-### Step 1: Get Your Hugging Face Token
-1. Go to https://huggingface.co/settings/tokens
-2. Create a token with `write` permission
-3. Save it — you'll need it
-
-### Step 2: Deploy to Hugging Face Space
+### Step 1: Login to Hugging Face (ONE TIME)
 ```bash
-# Option A: Using HF CLI (recommended)
-pip install huggingface_hub huggingface-cli
-huggingface-cli login  # paste your token
-
-# Create a new Space at https://huggingface.co/spaces/<your-username>/sentinel-env
-# SDK: Docker
-# Hardware: CPU (2 vCPU, 8 GB RAM)
-
-# Push the project
-huggingface-cli repo create sentinel-env --type space --space_sdk docker
-git clone https://huggingface.co/spaces/<your-username>/sentinel-env hf-space
-cd hf-space
-cp -r ../server/ .
-cp ../models.py ../client.py ../openenv.yaml ../pyproject.toml ../__init__.py ../Dockerfile ../.dockerignore ../README.md .
-# Edit Dockerfile to use the files in the same directory
-git add -A && git commit -m "Deploy Sentinel Environment" && git push
+huggingface-cli login
+# Paste your token from https://huggingface.co/settings/tokens
 ```
 
-### Step 3: Verify Your Space
-1. Go to https://huggingface.co/spaces/<your-username>/sentinel-env
-2. Wait for it to build (shows "Running" when ready)
-3. Test: `curl -X POST https://<your-username>-sentinel-env.hf.space/reset`
-4. Should return JSON with observation data
+### Step 2: Deploy (One Command)
+```bash
+cd "E:\OpenENV RL Challenge"
+deploy.bat
+```
+
+That's it. The script will:
+1. ✅ Check you're logged in
+2. ✅ Create the HF Space with Docker SDK
+3. ✅ Clone the Space repo
+4. ✅ Copy all 27 project files + HF README
+5. ✅ Commit and push
+6. ✅ Give you the Space URL
+
+The Space will build for 3-5 minutes. When it shows "Running", you're submitted.
 
 ---
 
