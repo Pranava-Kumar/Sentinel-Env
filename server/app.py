@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from models import SentinelAction, SentinelObservation, SentinelState
 from server.sentinel_environment import SentinelEnvironment
 from server.rate_limiter import RateLimiter
+from server.episode_manager import EpisodeManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,9 +36,8 @@ async def check_rate_limit(request: Request, client_ip: str = Depends(get_client
     if not await rate_limiter.check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
 
-# Global environment instance and lock for thread safety
-env = None
-env_lock: asyncio.Lock = asyncio.Lock()
+# Episode manager for concurrent episode support
+episode_manager = EpisodeManager(max_episodes=1000, ttl_seconds=3600)
 
 
 async def verify_api_key(x_api_key: str = Header(None)):
@@ -48,22 +48,8 @@ async def verify_api_key(x_api_key: str = Header(None)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global env, env_lock
-    env = SentinelEnvironment()
-    env_lock = asyncio.Lock()
-    
-    # Start periodic cleanup task
-    async def cleanup_loop():
-        while True:
-            await asyncio.sleep(60)
-            rate_limiter.cleanup()
-    
-    cleanup_task = asyncio.create_task(cleanup_loop())
-    
     logger.info("Sentinel Environment initialized")
     yield
-    
-    cleanup_task.cancel()
     logger.info("Sentinel Environment shutdown")
 
 
@@ -89,45 +75,63 @@ async def reset(
         task_name: basic-injection, social-engineering, or stealth-exfiltration
         seed: Random seed for reproducibility
     """
-    global env, env_lock
-    async with env_lock:
-        try:
-            observation = env.reset(task_name=task_name, seed=seed)
-            return JSONResponse(content=observation.model_dump())
-        except Exception as e:
-            logger.error(f"reset() failed: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Internal server error")
+    try:
+        episode_id = episode_manager.create_episode(task_name=task_name, seed=seed)
+        env = episode_manager.get_episode(episode_id)
+        observation = env.reset(task_name=task_name, seed=seed)
+        
+        response_data = observation.model_dump()
+        response_data["episode_id"] = episode_id
+        return JSONResponse(content=response_data)
+    except Exception as e:
+        logger.error(f"reset() failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/step")
 async def step(
     request: Request,
     action: SentinelAction,
+    episode_id: str = Header(None, alias="X-Episode-ID"),
     api_key: str = Depends(verify_api_key),
     rate_limit: bool = Depends(check_rate_limit),
 ):
     """Execute one step in the current episode."""
-    global env, env_lock
-    async with env_lock:
-        try:
-            observation, reward, done, info = env.step(action)
-            return JSONResponse(content={
-                "observation": observation.model_dump(),
-                "reward": reward,
-                "done": done,
-                "info": info,
-            })
-        except RuntimeError as e:
-            raise HTTPException(status_code=400, detail="Invalid request")
-        except Exception as e:
-            logger.error(f"step() failed: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Internal server error")
+    if not episode_id:
+        raise HTTPException(status_code=400, detail="X-Episode-ID header required")
+    
+    env = episode_manager.get_episode(episode_id)
+    if env is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
+    try:
+        observation, reward, done, info = env.step(action)
+        return JSONResponse(content={
+            "observation": observation.model_dump(),
+            "reward": reward,
+            "done": done,
+            "info": info,
+        })
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"step() failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/state")
-async def state(api_key: str = Depends(verify_api_key)):
+async def state(
+    episode_id: str = Header(None, alias="X-Episode-ID"),
+    api_key: str = Depends(verify_api_key),
+):
     """Get current episode state."""
-    global env
+    if not episode_id:
+        raise HTTPException(status_code=400, detail="X-Episode-ID header required")
+    
+    env = episode_manager.get_episode(episode_id)
+    if env is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
     try:
         state = env.state()
         return JSONResponse(content=state.model_dump())
@@ -147,9 +151,18 @@ async def health():
 
 
 @app.get("/grade")
-async def grade(api_key: str = Depends(verify_api_key)):
+async def grade(
+    episode_id: str = Header(None, alias="X-Episode-ID"),
+    api_key: str = Depends(verify_api_key),
+):
     """Grade the current episode (helper endpoint)."""
-    global env
+    if not episode_id:
+        raise HTTPException(status_code=400, detail="X-Episode-ID header required")
+    
+    env = episode_manager.get_episode(episode_id)
+    if env is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
     try:
         result = env.get_episode_grade()
         return JSONResponse(content=result)
@@ -159,9 +172,18 @@ async def grade(api_key: str = Depends(verify_api_key)):
 
 
 @app.get("/resilience-profile")
-async def resilience_profile(api_key: str = Depends(verify_api_key)):
+async def resilience_profile(
+    episode_id: str = Header(None, alias="X-Episode-ID"),
+    api_key: str = Depends(verify_api_key),
+):
     """Get resilience profile for current episode (helper endpoint)."""
-    global env
+    if not episode_id:
+        raise HTTPException(status_code=400, detail="X-Episode-ID header required")
+    
+    env = episode_manager.get_episode(episode_id)
+    if env is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    
     try:
         profile = env.get_resilience_profile()
         return JSONResponse(content=profile)
