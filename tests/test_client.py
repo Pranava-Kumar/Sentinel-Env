@@ -208,6 +208,17 @@ class TestSentinelEnvContextManager:
             with pytest.raises(RuntimeError, match="Client not initialized"):
                 await env.reset()
 
+    @pytest.mark.asyncio
+    async def test_aenter_handles_connection_error(self):
+        """Should propagate initialization errors and not leak client."""
+        with patch("httpx.AsyncClient", side_effect=ConnectionError("Connection refused")):
+            env = SentinelEnv("http://localhost:7860")
+            with pytest.raises(ConnectionError, match="Connection refused"):
+                async with env:
+                    pass
+            # Client should be cleaned up even on error
+            assert env.client is None
+
 
 class TestSentinelEnvErrorHandling:
     @pytest.mark.asyncio
@@ -247,9 +258,15 @@ class TestSentinelEnvErrorHandling:
             await env.close()
 
     @pytest.mark.asyncio
+    async def test_from_docker_image_handles_error(self):
+        """from_docker_image should clean up on initialization failure."""
+        with patch("httpx.AsyncClient", side_effect=ConnectionError("Connection refused")):
+            with pytest.raises(ConnectionError, match="Connection refused"):
+                await SentinelEnv.from_docker_image(port=7860)
+
+    @pytest.mark.asyncio
     async def test_close_is_idempotent(self):
         """Calling close multiple times should not raise."""
         env = SentinelEnv("http://localhost:7860")
         await env.close()
         await env.close()  # Should not raise
-

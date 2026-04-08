@@ -18,8 +18,12 @@ class SentinelEnv:
         self.client: Optional[httpx.AsyncClient] = None
 
     async def __aenter__(self):
-        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
-        return self
+        try:
+            self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
+            return self
+        except Exception:
+            await self.close()
+            raise
 
     async def __aexit__(self, *args):
         await self.close()
@@ -75,5 +79,9 @@ class SentinelEnv:
         """Create client connected to a docker-based environment."""
         base_url = f"http://localhost:{port}"
         instance = cls(base_url=base_url)
-        instance.client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
-        return instance
+        try:
+            instance.client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
+            return instance
+        except Exception:
+            await instance.close()
+            raise
