@@ -13,9 +13,6 @@ from models import (
     ResilienceMetrics,
 )
 from server.attack_engine import generate_attack_sequence, EPISODE_LENGTHS
-from server.reward_shaper import compute_reward
-from server.grader import grade_step, grade_episode
-from server.resilience_profile import generate_resilience_profile
 
 
 class SentinelEnvironment:
@@ -39,6 +36,7 @@ class SentinelEnvironment:
         self._running_fp = 0
         self._running_total_attacks = 0
         self._running_total_safe = 0
+        self._running_attacks_presented = 0
 
     def reset(self, task_name: str = "basic-injection", seed: int = 42) -> SentinelObservation:
         """Initialize a new episode.
@@ -67,6 +65,7 @@ class SentinelEnvironment:
         self._running_fp = 0
         self._running_total_attacks = 0
         self._running_total_safe = 0
+        self._running_attacks_presented = 0
 
         return self._build_observation()
 
@@ -85,7 +84,34 @@ class SentinelEnvironment:
         self.step_count += 1
         ground_truth = self.current_attack["ground_truth"]
 
+        # Delegate to helper
+        step_result, reward = self._process_step(action, ground_truth)
+
+        # Determine if done
+        done = self.step_count >= self.max_steps
+
+        # Build next observation
+        observation = self._build_observation()
+
+        info = {
+            "step_result": step_result,
+            "episode_id": self.episode_id,
+        }
+
+        return observation, reward, done, info
+
+    def _process_step(self, action: SentinelAction, ground_truth: str) -> Tuple[Dict[str, Any], float]:
+        """Process step: compute reward, grade, update metrics.
+
+        Args:
+            action: Agent's action
+            ground_truth: Expected classification
+
+        Returns:
+            Tuple of (step_result dict, reward float)
+        """
         # Compute reward
+        from server.reward_shaper import compute_reward
         reward = compute_reward(
             action,
             ground_truth,
@@ -94,7 +120,6 @@ class SentinelEnvironment:
         )
 
         # Track results
-        is_safe = self.current_attack.get("is_attack", False)
         step_result = {
             "ground_truth": ground_truth,
             "prediction": action.classification.value,
@@ -109,6 +134,7 @@ class SentinelEnvironment:
         }
 
         # Enrich with grader result
+        from server.grader import grade_step
         grade_result = grade_step(action.classification, ground_truth, action.reasoning)
         step_result.update(grade_result)
         self.episode_results.append(step_result)
@@ -126,36 +152,21 @@ class SentinelEnvironment:
         # Track statistics
         if self.current_attack.get("is_attack", False):
             self.total_attacks_presented += 1
+            self._running_attacks_presented += 1
             if step_result["is_correct"]:
                 self.attacks_correctly_detected += 1
         if step_result["is_false_positive"]:
             self.false_positives += 1
 
-        # Determine if done
-        done = self.step_count >= self.max_steps
-
-        # Build next observation
-        observation = self._build_observation()
-
-        info = {
-            "step_result": step_result,
-            "episode_id": self.episode_id,
-        }
-
-        return observation, reward, done, info
+        return step_result, reward
 
     def state(self) -> SentinelState:
         """Return current episode state."""
-        total_attacks = sum(
-            1 for a in self.attack_sequence[:self.step_count]
-            if a.get("is_attack", False)
-        )
-
         return SentinelState(
             episode_id=self.episode_id or "none",
             task_name=self.task_name or "none",
             step_count=self.step_count,
-            total_attacks_presented=total_attacks,
+            total_attacks_presented=self._running_attacks_presented,
             attacks_correctly_detected=self.attacks_correctly_detected,
             false_positives=self.false_positives,
             current_resilience_score=self._current_resilience_score(),
@@ -164,10 +175,12 @@ class SentinelEnvironment:
 
     def get_episode_grade(self) -> Dict[str, Any]:
         """Grade the completed episode."""
+        from server.grader import grade_episode
         return grade_episode(self.episode_results)
 
     def get_resilience_profile(self) -> Dict[str, Any]:
         """Generate resilience profile for completed episode."""
+        from server.resilience_profile import generate_resilience_profile
         return generate_resilience_profile(
             self.episode_results,
             self.task_name or "unknown",

@@ -3,6 +3,7 @@
 import pytest
 from models import SentinelAction, ThreatCategory
 from server.sentinel_environment import SentinelEnvironment
+from server.attack_engine import EPISODE_LENGTHS
 
 
 class TestSentinelEnvironment:
@@ -60,7 +61,8 @@ class TestSentinelEnvironment:
         env = SentinelEnvironment()
         env.reset(task_name="basic-injection", seed=42)
         done = False
-        for _ in range(20):  # Increased to ensure episode ends
+        max_steps = EPISODE_LENGTHS.get("basic-injection", 12)
+        for _ in range(max_steps + 2):  # Buffer to ensure episode ends
             action = SentinelAction(
                 classification=ThreatCategory.SAFE,
                 reasoning="This prompt appears to be safe and benign",

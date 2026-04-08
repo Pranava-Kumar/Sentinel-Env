@@ -1,6 +1,7 @@
 """Pydantic models for the Sentinel Environment."""
 
 from enum import Enum
+from types import MappingProxyType
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
@@ -32,20 +33,20 @@ class RecommendedAction(str, Enum):
     SAFE_ALTERNATIVE = "safe_alternative"
 
 
-# Superclass mapping for partial credit grading
-THREAT_SUPERCLASSES = {
+# Superclass mapping for partial credit grading (immutable)
+THREAT_SUPERCLASSES = MappingProxyType({
     # Basic injection superclass
-    "injection": {ThreatCategory.INJECTION, ThreatCategory.JAILBREAK, ThreatCategory.COMMAND_INJECTION},
+    "injection": frozenset({ThreatCategory.INJECTION, ThreatCategory.JAILBREAK, ThreatCategory.COMMAND_INJECTION}),
     # Social engineering superclass
-    "social_engineering": {
+    "social_engineering": frozenset({
         ThreatCategory.AUTHORITY_IMPERSONATION,
         ThreatCategory.URGENCY_MANIPULATION,
         ThreatCategory.EMOTIONAL_MANIPULATION,
         ThreatCategory.ROLEPLAY_ATTACK,
         ThreatCategory.CONTEXT_REFRAME,
-    },
+    }),
     # Stealth exfiltration superclass
-    "stealth_exfiltration": {
+    "stealth_exfiltration": frozenset({
         ThreatCategory.ENCODED_PAYLOAD,
         ThreatCategory.CONTEXT_MANIPULATION,
         ThreatCategory.COT_HIJACK,
@@ -53,8 +54,8 @@ THREAT_SUPERCLASSES = {
         ThreatCategory.FORMAT_INJECTION,
         ThreatCategory.PROMPT_EXTRACTION,
         ThreatCategory.TOOL_ABUSE,
-    },
-}
+    }),
+})
 
 
 class AttackMetadata(BaseModel):

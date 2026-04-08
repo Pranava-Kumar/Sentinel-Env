@@ -37,8 +37,10 @@ class TestResetEndpoint:
     def test_reset_invalid_task(self, client):
         """Test reset with invalid task name."""
         response = client.post("/reset", params={"task_name": "invalid-task", "seed": 42})
-        # Should return 500 or handle gracefully
-        assert response.status_code in [200, 500]
+        # Should return 500 with error message, not silently succeed
+        assert response.status_code == 500
+        data = response.json()
+        assert "detail" in data
 
     def test_reset_different_seeds(self, client):
         """Test different seeds produce different observations."""
@@ -70,7 +72,7 @@ class TestStepEndpoint:
         reset_response = client.post("/reset", params={"task_name": "basic-injection", "seed": 42})
         assert reset_response.status_code == 200
         episode_id = reset_response.json()["episode_id"]
-        
+
         action = {
             "classification": "injection",
             "reasoning": "Direct override attempt detected",
@@ -111,7 +113,7 @@ class TestStateEndpoint:
         # Reset first to get episode ID
         reset_response = client.post("/reset", params={"task_name": "basic-injection", "seed": 42})
         episode_id = reset_response.json()["episode_id"]
-        
+
         response = client.get("/state", headers={"X-Episode-ID": episode_id})
         assert response.status_code == 200
         data = response.json()
@@ -135,7 +137,7 @@ class TestGradeEndpoint:
         # Reset first to get episode ID
         reset_response = client.post("/reset", params={"task_name": "basic-injection", "seed": 42})
         episode_id = reset_response.json()["episode_id"]
-        
+
         response = client.get("/grade", headers={"X-Episode-ID": episode_id})
         assert response.status_code == 200
         data = response.json()
@@ -158,7 +160,7 @@ class TestResilienceProfileEndpoint:
         # Reset first to get episode ID
         reset_response = client.post("/reset", params={"task_name": "basic-injection", "seed": 42})
         episode_id = reset_response.json()["episode_id"]
-        
+
         response = client.get("/resilience-profile", headers={"X-Episode-ID": episode_id})
         assert response.status_code == 200
         data = response.json()
