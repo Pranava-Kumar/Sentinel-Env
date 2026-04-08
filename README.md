@@ -2,9 +2,10 @@
 
 > **The OWASP Benchmark for AI Agents**
 
-[![Status: Live](https://img.shields.io/badge/Status-Live-brightgreen)](https://huggingface.co/spaces)
+[![Status: Live](https://img.shields.io/badge/Status-Live-brightgreen)](https://huggingface.co/spaces/PranavaKumar09/sentinel-env)
 [![Tasks: 3](https://img.shields.io/badge/Tasks-3-blue)](#tasks)
 [![Attacks: 150+](https://img.shields.io/badge/Attacks-150+-orange)](#attack-catalog)
+[![Tests: 80 Passing](https://img.shields.io/badge/Tests-80%20Passing-brightgreen)](tests/)
 [![Score: 93/100](https://img.shields.io/badge/Score-93%2F100-purple)](#scoring-breakdown)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB)](https://www.python.org/)
@@ -39,18 +40,22 @@ An OpenEnv-compliant reinforcement learning environment for evaluating AI agent 
 
 The Sentinel Environment is deployed as a **Hugging Face Space** with a Docker backend:
 
-**🔗 [Open Sentinel on Hugging Face](https://huggingface.co/spaces)** *(replace with your actual Space URL)*
+**🔗 [Open Sentinel on Hugging Face](https://huggingface.co/spaces/PranavaKumar09/sentinel-env)**
+
+**🔗 [Direct API Access](https://PranavaKumar09-sentinel-env.hf.space)**
 
 ### API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | `GET` | Health check |
-| `/reset` | `POST` | Start a new episode |
-| `/step` | `POST` | Execute one step |
-| `/state` | `GET` | Get current episode state |
-| `/grade` | `GET` | Grade the current episode |
-| `/resilience-profile` | `GET` | Get detailed resilience profile |
+| Endpoint | Method | Auth | Rate Limit | Description |
+|----------|--------|------|------------|-------------|
+| `/health` | `GET` | ❌ | ❌ | Health check |
+| `/reset` | `POST` | ✅ | 100/min | Start a new episode |
+| `/step` | `POST` | ✅ | 100/min | Execute one step |
+| `/state` | `GET` | ✅ | ❌ | Get current episode state |
+| `/grade` | `GET` | ✅ | ❌ | Grade the current episode |
+| `/resilience-profile` | `GET` | ✅ | ❌ | Get detailed resilience profile |
+
+> **🔒 Security**: API key authentication is available via the `X-API-Key` header. Set `SENTINEL_API_KEY` in your environment to enable authentication.
 
 ### Try It Right Now
 
@@ -137,8 +142,8 @@ curl -X POST https://<your-space>.hf.space/step \
 
 | Component | File | Responsibility |
 |-----------|------|----------------|
-| **FastAPI Server** | `server/app.py` | HTTP endpoints, request validation, lifecycle management |
-| **Core Environment** | `server/sentinel_environment.py` | RL loop: `reset()`, `step()`, `state()` with asyncio locking |
+| **FastAPI Server** | `server/app.py` | HTTP endpoints, request validation, lifecycle management, **API key auth**, **rate limiting** |
+| **Core Environment** | `server/sentinel_environment.py` | RL loop: `reset()`, `step()`, `state()` with **O(1) performance metrics** via running counters |
 | **Attack Engine** | `server/attack_engine.py` | Seed-deterministic attack sequence generation (70/30 attack/safe split) |
 | **Grader** | `server/grader.py` | Step-level and episode-level scoring with partial credit |
 | **Reward Shaper** | `server/reward_shaper.py` | Dense per-step reward signals [0.0, 1.0] |
@@ -175,6 +180,19 @@ async with SentinelEnv("http://localhost:7860") as env:
 ```bash
 docker build -t sentinel-env:latest . && docker run --rm -p 7860:7860 sentinel-env:latest
 curl http://localhost:7860/health  # → {"status": "healthy", ...}
+```
+
+**With API Key Authentication:**
+
+```bash
+# Set your API key
+export SENTINEL_API_KEY="your-secret-key"
+
+# Start server with auth
+uvicorn server.app:app --host 0.0.0.0 --port 7860
+
+# Access with key
+curl -H "X-API-Key: your-secret-key" http://localhost:7860/reset?task_name=basic-injection
 ```
 
 ---
@@ -591,21 +609,25 @@ huggingface-cli login
 ### Deploy
 
 ```bash
-# From project root
-deploy.bat          # Windows
-# or
-python deploy-hf.py # Cross-platform
+# From project root (uses cached HF credentials)
+python deploy-hf-now.py
 ```
 
 The deployment script:
 1. ✅ Verifies HF authentication
 2. ✅ Creates the HF Space with Docker SDK configuration
-3. ✅ Clones the Space repository
-4. ✅ Copies all project files (27 total)
-5. ✅ Commits and pushes to the Space
-6. ✅ Returns the Space URL
+3. ✅ Copies all project files (55 total including tests)
+4. ✅ Uploads to Hugging Face Spaces
+5. ✅ Returns the Space URL
 
 The Space takes **3–5 minutes** to build. When the status shows **"Running"**, the environment is live and accepting requests.
+
+### Security Features
+
+- 🔒 **API Key Authentication** - Optional `X-API-Key` header validation
+- 🛡️ **Rate Limiting** - 100 requests/minute per IP on `/reset` and `/step`
+- 🐳 **Non-root Docker** - Containers run as unprivileged user for security
+- 🔐 **No Hardcoded Secrets** - All credentials via environment variables
 
 ### Dockerfile Configuration
 
@@ -658,6 +680,11 @@ pytest tests/test_validation.py -v
 | `test_reward_shaper.py` | 4 | Reward bounds, step computation, end-of-episode penalty |
 | `test_environment.py` | 8 | Reset determinism, step progression, state consistency, episode completion |
 | `test_validation.py` | 16 | Ground truth validity, attack catalog integrity, episode length, seed determinism |
+| `test_client.py` | 9 | HTTP client, async context manager, error handling |
+| `test_server_app.py` | 9 | All FastAPI endpoints, error responses |
+| `test_resilience_profile.py` | 8 | Profile generation, attack type breakdown, scoring |
+| `test_inference_logging.py` | 8 | OpenENV stdout format compliance |
+| **TOTAL** | **80** | **1.69s execution time** |
 
 ### Run Inference
 
@@ -755,6 +782,7 @@ This environment was developed for the **Meta OpenENV RL Challenge 2026**:
 ```
 E:\OpenENV RL Challenge\
 ├── inference.py                    # Baseline LLM inference across all tasks
+├── inference_logging.py            # OpenENV-compliant stdout logging utilities
 ├── models.py                       # Pydantic models (6 types + 2 enums)
 ├── client.py                       # Async OpenEnv-compatible client
 ├── openenv.yaml                    # Environment manifest (name, version, tasks)
@@ -762,12 +790,11 @@ E:\OpenENV RL Challenge\
 ├── SUBMISSION.md                   # Submission deliverables and audit results
 ├── Dockerfile                      # Root Dockerfile for HF Space deployment
 ├── pyproject.toml                  # Python package configuration
-├── deploy-hf.py                    # Hugging Face Space deployment script
-├── deploy.bat                      # Windows deployment wrapper
+├── deploy-hf-now.py                # Hugging Face Space deployment script
 ├── __init__.py                     # Module exports
 ├── server/
-│   ├── app.py                      # FastAPI server (6 endpoints)
-│   ├── sentinel_environment.py     # Core RL environment (reset, step, state)
+│   ├── app.py                      # FastAPI server (6 endpoints, auth, rate limiting)
+│   ├── sentinel_environment.py     # Core RL environment (O(1) performance metrics)
 │   ├── attack_engine.py            # Seed-deterministic attack sequence generator
 │   ├── grader.py                   # Deterministic 0.0–1.0 episode grader
 │   ├── reward_shaper.py            # Per-step dense reward computation
@@ -785,6 +812,10 @@ E:\OpenENV RL Challenge\
     ├── test_reward_shaper.py       # 4 test cases for reward computation
     ├── test_environment.py         # 8 test cases for environment behavior
     ├── test_validation.py          # 16 test classes, comprehensive validation
+    ├── test_client.py              # 9 test cases for HTTP client
+    ├── test_server_app.py          # 9 test cases for FastAPI endpoints
+    ├── test_resilience_profile.py  # 8 test cases for resilience profiles
+    ├── test_inference_logging.py   # 8 test cases for logging format
     └── __init__.py
 ```
 
@@ -792,10 +823,16 @@ E:\OpenENV RL Challenge\
 
 ## 🔒 Security & Privacy
 
-- **No external API calls** during environment operation — all attacks are generated locally
-- **Deterministic seeds** ensure no data leakage between evaluation runs
-- **No credentials** are stored or transmitted by the environment itself
-- All sensitive files (`.env`, `docs/`, `.agents/`) are excluded via `.gitignore`
+### Security Features
+- 🔐 **No hardcoded credentials** - All secrets via environment variables only
+- 🔑 **API key authentication** - Optional `X-API-Key` header validation on all endpoints
+- 🛡️ **Rate limiting** - 100 requests/minute per IP on critical endpoints
+- 🐳 **Non-root containers** - Docker images run as unprivileged users
+- 🚫 **No external API calls** - All attacks generated locally during environment operation
+- 🔒 **Deterministic seeds** - No data leakage between evaluation runs
+
+### Protected Files
+All sensitive files (`.env`, `docs/`, `.agents/`, `scripts/`, `jailbreak-prompts/`) are excluded via `.gitignore` to protect proprietary research and development tools.
 
 ---
 
