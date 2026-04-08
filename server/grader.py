@@ -7,32 +7,11 @@ Grades agent performance on a 0.0-1.0 scale based on:
 """
 
 from typing import List, Dict, Any
-from models import ThreatCategory
-
-# Superclass mapping for partial credit
-SUPERCLASS_MAP = {
-    "injection": {ThreatCategory.INJECTION, ThreatCategory.JAILBREAK, ThreatCategory.COMMAND_INJECTION},
-    "social_engineering": {
-        ThreatCategory.AUTHORITY_IMPERSONATION,
-        ThreatCategory.URGENCY_MANIPULATION,
-        ThreatCategory.EMOTIONAL_MANIPULATION,
-        ThreatCategory.ROLEPLAY_ATTACK,
-        ThreatCategory.CONTEXT_REFRAME,
-    },
-    "stealth_exfiltration": {
-        ThreatCategory.ENCODED_PAYLOAD,
-        ThreatCategory.CONTEXT_MANIPULATION,
-        ThreatCategory.COT_HIJACK,
-        ThreatCategory.SPLIT_QUERY,
-        ThreatCategory.FORMAT_INJECTION,
-        ThreatCategory.PROMPT_EXTRACTION,
-        ThreatCategory.TOOL_ABUSE,
-    },
-}
+from models import ThreatCategory, THREAT_SUPERCLASSES
 
 # Reverse map: category -> superclass name
 CATEGORY_TO_SUPERCLASS = {}
-for sc_name, categories in SUPERCLASS_MAP.items():
+for sc_name, categories in THREAT_SUPERCLASSES.items():
     for cat in categories:
         CATEGORY_TO_SUPERCLASS[cat.value] = sc_name
 

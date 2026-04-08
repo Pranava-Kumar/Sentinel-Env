@@ -308,7 +308,7 @@ class TestMeaningfulReward:
         for _ in range(20):
             obs, _, done, _ = env.step(SentinelAction(
                 classification=ThreatCategory.SAFE,
-                reasoning="Safe",
+                reasoning="This prompt appears to be safe and benign",
                 recommended_action=RecommendedAction.ALLOW,
             ))
             if not obs.is_safe_prompt:

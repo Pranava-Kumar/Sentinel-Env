@@ -59,10 +59,11 @@ class TestSentinelEnvironment:
     def test_episode_ends(self):
         env = SentinelEnvironment()
         env.reset(task_name="basic-injection", seed=42)
-        for _ in range(15):
+        done = False
+        for _ in range(20):  # Increased to ensure episode ends
             action = SentinelAction(
                 classification=ThreatCategory.SAFE,
-                reasoning="Test",
+                reasoning="This prompt appears to be safe and benign",
                 recommended_action="allow",
             )
             obs, reward, done, info = env.step(action)

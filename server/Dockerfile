@@ -15,6 +15,10 @@ COPY openenv.yaml /app/openenv.yaml
 COPY pyproject.toml /app/pyproject.toml
 COPY __init__.py /app/__init__.py
 
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser
+USER appuser
+
 EXPOSE 7860
 
 CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860", "--log-level", "info"]

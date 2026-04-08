@@ -10,6 +10,10 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 # Copy all project files
 COPY . .
 
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser
+USER appuser
+
 # Expose port
 EXPOSE 7860
 

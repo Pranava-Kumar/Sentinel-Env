@@ -72,11 +72,8 @@ class SentinelEnv:
         image_name: Optional[str] = None,
         port: int = 7860,
     ) -> "SentinelEnv":
-        """Create client connected to a docker-based environment.
-
-        For OpenEnv compatibility — in practice the HF Space handles deployment.
-        """
+        """Create client connected to a docker-based environment."""
         base_url = f"http://localhost:{port}"
-        client = cls(base_url=base_url)
-        client.client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
-        return client
+        instance = cls(base_url=base_url)
+        instance.client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
+        return instance
