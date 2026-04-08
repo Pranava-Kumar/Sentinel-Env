@@ -26,6 +26,20 @@ print(f"  Space: {SPACE_ID}")
 print(f"  URL:   {SPACE_URL}")
 print(f"=" * 60)
 
+
+def ignore_patterns(path, names):
+    """Ignore sensitive files during deployment."""
+    ignored = set()
+    for name in names:
+        if name.startswith('.') and name not in {'.dockerignore', '.gitignore'}:
+            ignored.add(name)
+        if name.endswith(('.pyc', '.pyo', '.log', '.key', '.secret')):
+            ignored.add(name)
+        if 'pycache' in name:
+            ignored.add(name)
+    return ignored
+
+
 # ── Step 1: Create Space if it doesn't exist ───────────────────────
 print(f"\n[1/4] Creating Space: {SPACE_ID}")
 try:
@@ -78,7 +92,7 @@ server_dst = DEPLOY_DIR / "server"
 if server_src.exists():
     if server_dst.exists():
         shutil.rmtree(server_dst)
-    shutil.copytree(server_src, server_dst)
+    shutil.copytree(server_src, server_dst, ignore=ignore_patterns)
     print(f"  ✓ Copied: server/")
 
 # Copy tests directory
@@ -87,7 +101,7 @@ tests_dst = DEPLOY_DIR / "tests"
 if tests_src.exists():
     if tests_dst.exists():
         shutil.rmtree(tests_dst)
-    shutil.copytree(tests_src, tests_dst)
+    shutil.copytree(tests_src, tests_dst, ignore=ignore_patterns)
     print(f"  ✓ Copied: tests/")
 
 # Create .gitignore for the space

@@ -49,12 +49,14 @@ import json
 import logging
 import os
 import textwrap
+import traceback
 from typing import List, Optional
 
 from openai import OpenAI
 
 from models import SentinelAction, ThreatCategory
 from client import SentinelEnv
+from inference_logging import log_start, log_step, log_end
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +66,19 @@ MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 BASE_URL = os.getenv("BASE_URL")
+EVAL_SEED = int(os.getenv("EVAL_SEED", "42"))
 
 if HF_TOKEN is None:
     raise ValueError("HF_TOKEN environment variable is required")
+
+if not HF_TOKEN.startswith("hf_"):
+    raise ValueError(
+        "HF_TOKEN must start with 'hf_' prefix. "
+        "Get your token from https://huggingface.co/settings/tokens"
+    )
+
+if len(HF_TOKEN) < 10:
+    raise ValueError("HF_TOKEN appears to be too short. Please check your token.")
 
 # ── Configuration ──────────────────────────────────────────────────────
 TASK_NAME = os.getenv("TASK_NAME")
@@ -101,24 +113,6 @@ Respond with JSON ONLY:
 """)
 
 THREAT_CATEGORIES = [c.value for c in ThreatCategory]
-
-
-def log_start(task: str, env_name: str, model: str) -> None:
-    print(f"[START] task={task} env={env_name} model={model}", flush=True)
-
-
-def log_step(step: int, action_str: str, reward: float, done: bool, error: Optional[str]) -> None:
-    error_val = error if error else "null"
-    done_val = str(done).lower()
-    print(
-        f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_val} error={error_val}",
-        flush=True,
-    )
-
-
-def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
 
 
 def build_user_prompt(step: int, user_prompt: str, attack_metadata: dict, resilience: dict) -> str:
@@ -216,7 +210,7 @@ async def main() -> None:
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        obs = await env.reset(task_name=TASK_NAME, seed=42)
+        obs = await env.reset(task_name=TASK_NAME, seed=EVAL_SEED)
 
         for step in range(1, MAX_STEPS + 1):
             action = get_model_response(
@@ -233,6 +227,7 @@ async def main() -> None:
                 obs, reward, done, info = await env.step(action)
             except Exception as e:
                 last_error = str(e)
+                logger.error(f"Step {step} failed: {e}\n{traceback.format_exc()}")
                 rewards.append(0.0)
                 steps_taken = step
                 log_step(step=step, action_str=action_str, reward=0.0, done=True, error=last_error)
