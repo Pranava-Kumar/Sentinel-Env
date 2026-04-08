@@ -20,10 +20,11 @@ TASK_CONFIG: Dict[str, Tuple[List, List, str]] = {
 }
 
 # Episode length: number of prompts (attacks + safe) per episode
+# Increased to match expanded attack catalogs (80 basic, 60 social, 50 stealth)
 EPISODE_LENGTHS = {
-    "basic-injection": 12,      # 8 attacks + 4 safe
-    "social-engineering": 10,   # 7 attacks + 3 safe
-    "stealth-exfiltration": 8,  # 5 attacks + 3 safe
+    "basic-injection": 16,      # 11 attacks + 5 safe (expanded from 12)
+    "social-engineering": 13,   # 9 attacks + 4 safe (expanded from 10)
+    "stealth-exfiltration": 11,  # 8 attacks + 3 safe (expanded from 8)
 }
 
 
