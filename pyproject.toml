@@ -36,6 +36,7 @@ dev = [
     "opentelemetry-instrumentation-fastapi",
     "opentelemetry-exporter-prometheus",
     "wandb>=0.25.0",
+    "trackio>=0.1.0",
     "sentry-sdk>=2.57.0",
     "prometheus-client>=0.24.0",
     # LLM security testing
@@ -102,11 +103,14 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLR2004", "RUF059"]  # Allow asserts, magic values, unused unpacks
+"tests/*" = ["S101", "PLR2004", "RUF059", "SIM117"]  # Allow asserts, magic values, unused unpacks, nested with
 "inference.py" = ["T201", "RUF059", "SIM105"]  # Allow print, unused unpacks
-"server/attacks/*" = ["RUF001"]  # Unicode homoglyphs are intentional for jailbreak attacks
+"server/attacks/*" = ["RUF001", "RUF003"]  # Unicode homoglyphs are intentional for jailbreak attacks
 "server/__init__.py" = ["N999"]  # Module naming from parent dir
 "tests/__init__.py" = ["N999"]
+"__init__.py" = ["N999"]  # Directory name has spaces
+"deploy-hf-now.py" = ["N999"]
+"deploy-hf.py" = ["N999"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -123,6 +127,7 @@ disallow_incomplete_defs = false
 check_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
+exclude = ["OpenENV RL Challenge"]
 warn_unused_ignores = true
 exclude = ["^tests/", "^tools/", "^scripts/"]
 
@@ -133,7 +138,7 @@ ignore_missing_imports = true
 # ── Bandit Configuration ────────────────────────────────────────────
 [tool.bandit]
 exclude_dirs = ["tests", "tools", "scripts"]
-skips = ["B101", "B601"]  # Allow assert, skip paramiko calls
+skips = ["B101", "B601", "B104", "B110", "B311"]  # Allow assert, skip paramiko, 0.0.0.0 binding (container req), try/except/pass (graceful degradation), random (non-crypto)
 
 # ── Pytest Configuration ────────────────────────────────────────────
 [tool.pytest.ini_options]

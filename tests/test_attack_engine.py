@@ -34,7 +34,7 @@ class TestGenerateAttackSequence:
 
     def test_all_tasks_generate(self):
         """All configured tasks should generate valid sequences."""
-        for task in TASK_CONFIG.keys():
+        for task in TASK_CONFIG:
             sequence = generate_attack_sequence(task, seed=42)
             assert len(sequence) == EPISODE_LENGTHS[task]
 

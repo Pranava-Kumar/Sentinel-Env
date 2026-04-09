@@ -2,12 +2,14 @@
 
 from enum import Enum
 from types import MappingProxyType
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class ThreatCategory(str, Enum):
     """All possible threat classifications the agent can output."""
+
     SAFE = "safe"
     INJECTION = "injection"
     JAILBREAK = "jailbreak"
@@ -28,38 +30,46 @@ class ThreatCategory(str, Enum):
 
 class RecommendedAction(str, Enum):
     """Recommended actions the sentinel can take."""
+
     BLOCK = "block"
     ALLOW = "allow"
     SAFE_ALTERNATIVE = "safe_alternative"
 
 
 # Superclass mapping for partial credit grading (immutable)
-THREAT_SUPERCLASSES = MappingProxyType({
-    # Basic injection superclass
-    "injection": frozenset({ThreatCategory.INJECTION, ThreatCategory.JAILBREAK, ThreatCategory.COMMAND_INJECTION}),
-    # Social engineering superclass
-    "social_engineering": frozenset({
-        ThreatCategory.AUTHORITY_IMPERSONATION,
-        ThreatCategory.URGENCY_MANIPULATION,
-        ThreatCategory.EMOTIONAL_MANIPULATION,
-        ThreatCategory.ROLEPLAY_ATTACK,
-        ThreatCategory.CONTEXT_REFRAME,
-    }),
-    # Stealth exfiltration superclass
-    "stealth_exfiltration": frozenset({
-        ThreatCategory.ENCODED_PAYLOAD,
-        ThreatCategory.CONTEXT_MANIPULATION,
-        ThreatCategory.COT_HIJACK,
-        ThreatCategory.SPLIT_QUERY,
-        ThreatCategory.FORMAT_INJECTION,
-        ThreatCategory.PROMPT_EXTRACTION,
-        ThreatCategory.TOOL_ABUSE,
-    }),
-})
+THREAT_SUPERCLASSES = MappingProxyType(
+    {
+        # Basic injection superclass
+        "injection": frozenset({ThreatCategory.INJECTION, ThreatCategory.JAILBREAK, ThreatCategory.COMMAND_INJECTION}),
+        # Social engineering superclass
+        "social_engineering": frozenset(
+            {
+                ThreatCategory.AUTHORITY_IMPERSONATION,
+                ThreatCategory.URGENCY_MANIPULATION,
+                ThreatCategory.EMOTIONAL_MANIPULATION,
+                ThreatCategory.ROLEPLAY_ATTACK,
+                ThreatCategory.CONTEXT_REFRAME,
+            }
+        ),
+        # Stealth exfiltration superclass
+        "stealth_exfiltration": frozenset(
+            {
+                ThreatCategory.ENCODED_PAYLOAD,
+                ThreatCategory.CONTEXT_MANIPULATION,
+                ThreatCategory.COT_HIJACK,
+                ThreatCategory.SPLIT_QUERY,
+                ThreatCategory.FORMAT_INJECTION,
+                ThreatCategory.PROMPT_EXTRACTION,
+                ThreatCategory.TOOL_ABUSE,
+            }
+        ),
+    }
+)
 
 
 class AttackMetadata(BaseModel):
     """Metadata about the current attack prompt."""
+
     attack_type: str = Field(..., description="Specific attack subtype identifier")
     difficulty: str = Field(..., description="Task difficulty: easy, medium, hard", pattern="^(easy|medium|hard)$")
     attack_text: str = Field(..., description="The actual attack prompt presented to the agent")
@@ -70,6 +80,7 @@ class AttackMetadata(BaseModel):
 
 class ResilienceMetrics(BaseModel):
     """Running resilience profile for the current episode."""
+
     detection_rate: float = Field(..., ge=0.0, le=1.0, description="Fraction of attacks correctly detected")
     false_positive_rate: float = Field(..., ge=0.0, le=1.0, description="Fraction of safe prompts flagged as attacks")
     attacks_correctly_detected: int = Field(0, description="Count of correct detections")
@@ -81,10 +92,10 @@ class ResilienceMetrics(BaseModel):
 
 class SentinelObservation(BaseModel):
     """What the agent sees at each step."""
+
     user_prompt: str = Field(..., description="The prompt to analyze (may or may not be an attack)")
-    conversation_history: list[str] = Field(
-        default_factory=list,
-        description="Prior conversation turns for multi-turn attack detection"
+    conversation_history: list[dict[str, Any]] = Field(
+        default_factory=list, description="Prior conversation turns for multi-turn attack detection"
     )
     attack_metadata: AttackMetadata
     resilience_metrics: ResilienceMetrics
@@ -95,20 +106,18 @@ class SentinelObservation(BaseModel):
 
 class SentinelAction(BaseModel):
     """The agent's response to the presented prompt."""
+
     classification: ThreatCategory = Field(..., description="Agent's classification of the prompt")
     reasoning: str = Field(..., min_length=10, description="Brief explanation of the Classification decision")
     recommended_action: RecommendedAction = Field(
-        ...,
-        description="Action to take: 'block', 'allow', or 'safe_alternative'"
+        ..., description="Action to take: 'block', 'allow', or 'safe_alternative'"
     )
-    safe_alternative: str | None = Field(
-        None,
-        description="If blocking, suggest this safe alternative"
-    )
+    safe_alternative: str | None = Field(None, description="If blocking, suggest this safe alternative")
 
 
 class SentinelState(BaseModel):
     """Current episode state for monitoring."""
+
     episode_id: str = Field(..., description="Unique episode identifier")
     task_name: str = Field(..., description="Current task name")
     step_count: int = Field(0, description="Number of steps taken so far")

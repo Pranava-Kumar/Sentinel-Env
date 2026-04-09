@@ -2,15 +2,23 @@
 
 Given a task name and seed, produces a reproducible sequence of attacks
 interleaved with safe prompts (30% safe, 70% attacks).
+
+Integrates real-world jailbreak prompts from the jailbreak-prompts directory
+for production-grade adversarial testing.
 """
 
 import random
 from typing import Any
 
+import structlog
+
 from server.attacks.advanced_jailbreaks import ADVANCED_JAILBREAK_ATTACKS, SAFE_PROMPTS_ADVANCED
 from server.attacks.basic_injections import BASIC_INJECTION_ATTACKS, SAFE_PROMPTS_BASIC
+from server.attacks.jailbreak_loader import load_jailbreak_prompts
 from server.attacks.social_engineering import SAFE_PROMPTS_SOCIAL, SOCIAL_ENGINEERING_ATTACKS
 from server.attacks.stealth_exfiltration import SAFE_PROMPTS_STEALTH, STEALTH_EXFILTRATION_ATTACKS
+
+logger = structlog.get_logger()
 
 # ── Merge advanced jailbreaks into existing attack pools ──
 # This creates a comprehensive attack catalog combining:
@@ -18,21 +26,82 @@ from server.attacks.stealth_exfiltration import SAFE_PROMPTS_STEALTH, STEALTH_EX
 # - L1B3RT4S jailbreak templates (elder-plinius)
 # - G0DM0D3 GODMODE/PARSELTONGUE patterns (elder-plinius)
 # - Real-world CVE attacks (EchoLeak, Copilot RCE, Cursor IDE)
+# - Real-world jailbreak prompts from jailbreak-prompts/ directory
 
 ALL_BASIC_ATTACKS = BASIC_INJECTION_ATTACKS + ADVANCED_JAILBREAK_ATTACKS
 ALL_SAFE_PROMPTS_BASIC = SAFE_PROMPTS_BASIC + SAFE_PROMPTS_ADVANCED
 
+
+def _augment_attacks_with_jailbreaks(
+    existing_attacks: list[tuple[str, str, str]],
+    difficulty: str,
+    target_types: set[str] | None = None,
+) -> list[tuple[str, str, str]]:
+    """Augment existing attack list with real-world jailbreak prompts.
+
+    Args:
+        existing_attacks: List of (text, ground_truth, attack_type) tuples
+        difficulty: Difficulty level to filter jailbreaks
+        target_types: If provided, only include jailbreaks matching these attack types
+
+    Returns:
+        Combined list of attacks (existing + jailbreak prompts)
+    """
+    augmented = list(existing_attacks)
+
+    try:
+        jailbreaks = load_jailbreak_prompts()
+    except Exception as e:
+        logger.warning("Failed to load jailbreak prompts, using synthetic attacks only", error=str(e))
+        return augmented
+
+    for jb in jailbreaks:
+        # Filter by difficulty if specified
+        if difficulty and jb.get("difficulty") != difficulty:
+            continue
+
+        # Filter by target attack types if specified
+        if target_types and jb.get("attack_type") not in target_types:
+            continue
+
+        # Convert to tuple format compatible with attack engine
+        attack_tuple = (
+            jb["text"],
+            jb["ground_truth"],
+            jb["attack_type"],
+        )
+        augmented.append(attack_tuple)
+
+    return augmented
+
+
+# Jailbreak-relevant attack types for basic injection task
+_BASIC_INJECTION_JB_TYPES = {"jailbreak", "system_override", "encoded_payload", "roleplay_attack"}
+
+# Augment attack pools with real-world jailbreaks
+ENHANCED_BASIC_ATTACKS = _augment_attacks_with_jailbreaks(ALL_BASIC_ATTACKS, "easy", _BASIC_INJECTION_JB_TYPES)
+ENHANCED_SOCIAL_ATTACKS = _augment_attacks_with_jailbreaks(
+    SOCIAL_ENGINEERING_ATTACKS,
+    "medium",
+    {"emotional_manipulation", "urgency_manipulation", "authority_impersonation", "context_reframe"},
+)
+ENHANCED_STEALTH_ATTACKS = _augment_attacks_with_jailbreaks(
+    STEALTH_EXFILTRATION_ATTACKS,
+    "hard",
+    {"encoded_payload", "context_manipulation", "format_injection", "cot_hijack", "split_query"},
+)
+
 # Task configuration: (attacks, safe_prompts, difficulty)
 TASK_CONFIG: dict[str, tuple[list, list, str]] = {
-    "basic-injection": (ALL_BASIC_ATTACKS, ALL_SAFE_PROMPTS_BASIC, "easy"),
-    "social-engineering": (SOCIAL_ENGINEERING_ATTACKS, SAFE_PROMPTS_SOCIAL, "medium"),
-    "stealth-exfiltration": (STEALTH_EXFILTRATION_ATTACKS, SAFE_PROMPTS_STEALTH, "hard"),
+    "basic-injection": (ENHANCED_BASIC_ATTACKS, ALL_SAFE_PROMPTS_BASIC, "easy"),
+    "social-engineering": (ENHANCED_SOCIAL_ATTACKS, SAFE_PROMPTS_SOCIAL, "medium"),
+    "stealth-exfiltration": (ENHANCED_STEALTH_ATTACKS, SAFE_PROMPTS_STEALTH, "hard"),
 }
 
 # Episode length: number of prompts (attacks + safe) per episode
 EPISODE_LENGTHS = {
-    "basic-injection": 16,      # 11 attacks + 5 safe
-    "social-engineering": 13,   # 9 attacks + 4 safe
+    "basic-injection": 16,  # 11 attacks + 5 safe
+    "social-engineering": 13,  # 9 attacks + 4 safe
     "stealth-exfiltration": 11,  # 8 attacks + 3 safe
 }
 
@@ -74,22 +143,26 @@ def generate_attack_sequence(
     sequence_items: list[dict[str, Any]] = []
 
     for attack_text, ground_truth, attack_type in selected_attacks:
-        sequence_items.append({
-            "text": attack_text,
-            "is_attack": True,
-            "ground_truth": ground_truth,
-            "attack_type": attack_type,
-            "difficulty": difficulty,
-        })
+        sequence_items.append(
+            {
+                "text": attack_text,
+                "is_attack": True,
+                "ground_truth": ground_truth,
+                "attack_type": attack_type,
+                "difficulty": difficulty,
+            }
+        )
 
     for safe_text in selected_safe:
-        sequence_items.append({
-            "text": safe_text,
-            "is_attack": False,
-            "ground_truth": "safe",
-            "attack_type": "none",
-            "difficulty": difficulty,
-        })
+        sequence_items.append(
+            {
+                "text": safe_text,
+                "is_attack": False,
+                "ground_truth": "safe",
+                "attack_type": "none",
+                "difficulty": difficulty,
+            }
+        )
 
     # Shuffle the combined sequence deterministically
     rng.shuffle(sequence_items)

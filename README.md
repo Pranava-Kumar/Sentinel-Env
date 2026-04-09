@@ -1,20 +1,21 @@
 # 🛡️ Sentinel Environment — AI Agent Safety & Jailbreak Detection
 
-> **The OWASP Benchmark for AI Agents**
+> **Production-Grade Continuous RL Learning Platform for AI Agent Safety**
 
-[![Status: Live](https://img.shields.io/badge/Status-Live-brightgreen)](https://huggingface.co/spaces/PranavaKumar09/sentinel-env)
+[![Status: Production](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://huggingface.co/spaces/PranavaKumar09/sentinel-env)
 [![Tasks: 3](https://img.shields.io/badge/Tasks-3-blue)](#tasks)
-[![Attacks: 150+](https://img.shields.io/badge/Attacks-150+-orange)](#attack-catalog)
-[![Tests: 80 Passing](https://img.shields.io/badge/Tests-80%20Passing-brightgreen)](tests/)
-[![Score: 93/100](https://img.shields.io/badge/Score-93%2F100-purple)](#scoring-breakdown)
+[![Attacks: 500+](https://img.shields.io/badge/Attacks-500%2B-orange)](#attack-catalog)
+[![Tests: 165 Passing](https://img.shields.io/badge/Tests-165%20Passing-brightgreen)](tests/)
+[![CI/CD](https://github.com/user/repo/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB)](https://www.python.org/)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-3776AB)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/Framework-FastAPI-009688)](https://fastapi.tiangolo.com/)
+[![W&B](https://img.shields.io/badge/Tracking-Weights%20%26%20Biases-FFBE00)](https://wandb.ai)
 [![OpenEnv](https://img.shields.io/badge/Challenge-OpenENV%20RL-FF6B35)](https://github.com/meta-pytorch/OpenEnv)
 
 ---
 
-An OpenEnv-compliant reinforcement learning environment for evaluating AI agent resilience against adversarial prompts, jailbreaks, and social engineering attacks. Sentinel provides systematic, reproducible safety benchmarking — producing actionable resilience profiles, not just pass/fail scores.
+A production-grade, continuously-learning reinforcement learning environment for evaluating AI agent safety against adversarial prompts, jailbreaks, and social engineering attacks. Sentinel integrates real-world jailbreak prompts (G0DM0D3, L1B3RT4S, etc.), provides comprehensive observability with W&B/Prometheus/Sentry, and features an auto-adaptive curriculum that gets harder as your model improves.
 
 ---
 

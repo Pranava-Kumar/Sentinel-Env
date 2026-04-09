@@ -12,7 +12,7 @@ from server.sentinel_environment import SentinelEnvironment
 
 class EpisodeManager:
     """Manages multiple concurrent episodes.
-    
+
     Each episode is identified by a unique session ID and can be
     independently reset, stepped, and queried.
     """
@@ -52,10 +52,10 @@ class EpisodeManager:
 
     def get_episode(self, episode_id: str) -> SentinelEnvironment | None:
         """Get an episode by ID.
-        
+
         Args:
             episode_id: Episode ID
-            
+
         Returns:
             SentinelEnvironment instance or None if not found
         """
@@ -66,10 +66,10 @@ class EpisodeManager:
 
     def remove_episode(self, episode_id: str) -> bool:
         """Remove an episode.
-        
+
         Args:
             episode_id: Episode ID
-            
+
         Returns:
             True if removed, False if not found
         """
@@ -81,15 +81,12 @@ class EpisodeManager:
 
     def cleanup_expired(self) -> int:
         """Remove episodes older than TTL.
-        
+
         Returns:
             Number of episodes removed
         """
         now = time.time()
-        expired = [
-            eid for eid, meta in self.episode_metadata.items()
-            if now - meta["created_at"] > self.ttl_seconds
-        ]
+        expired = [eid for eid, meta in self.episode_metadata.items() if now - meta["created_at"] > self.ttl_seconds]
 
         for episode_id in expired:
             self.remove_episode(episode_id)

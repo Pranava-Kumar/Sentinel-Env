@@ -5,35 +5,76 @@ Implements OpenEnv-compatible endpoints:
 - POST /step   — Execute one step
 - GET  /state  — Get current episode state
 - GET  /health — Health check
+- GET  /grade  — Grade current episode
+- GET  /resilience-profile — Get resilience profile
+- GET  /metrics — Prometheus metrics
+
+Production features:
+- Structured logging with structlog
+- Request/response audit logging
+- Prometheus metrics
+- Sentry error tracking
+- Request body size limits
 """
 
 import hmac
-import logging
 import os
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from models import SentinelAction
 from server.episode_manager import EpisodeManager
+from server.middleware import setup_production_middleware
 from server.rate_limiter import RateLimiter
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure structlog for JSON output
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.JSONRenderer(),
+    ],
+    logger_factory=structlog.PrintLoggerFactory(),
+)
+
+logger = structlog.get_logger()
 
 # ── Configuration ──────────────────────────────────────────────────
 SENTINEL_API_KEY = os.getenv("SENTINEL_API_KEY")
 
+# Initialize Sentry if DSN is provided
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=0.1,
+            environment=os.getenv("ENVIRONMENT", "production"),
+        )
+        logger.info("Sentry initialized")
+    except ImportError:
+        logger.warning("sentry-sdk not installed, error tracking disabled")
+
 # ── Rate Limiting ──────────────────────────────────────────────────
 rate_limiter = RateLimiter(max_requests=100, window_seconds=60, max_entries=10000)
+
 
 async def get_client_ip(request: Request) -> str:
     return request.client.host
 
+
 async def check_rate_limit(request: Request, client_ip: str = Depends(get_client_ip)):
     if not await rate_limiter.check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
+
 
 # Episode manager for concurrent episode support
 episode_manager = EpisodeManager(max_episodes=1000, ttl_seconds=3600)
@@ -47,17 +88,32 @@ async def verify_api_key(x_api_key: str = Header(None)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Sentinel Environment initialized")
+    logger.info("Sentinel Environment initialized", version="1.0.0")
+    logger.info(
+        "Configuration",
+        api_key_configured=bool(SENTINEL_API_KEY),
+        sentry_enabled=SENTRY_DSN is not None,
+        rate_limit=100,
+        max_episodes=1000,
+    )
     yield
     logger.info("Sentinel Environment shutdown")
 
 
 app = FastAPI(
     title="Sentinel Environment",
-    description="AI Agent Safety & Jailbreak Detection Environment",
-    version="1.0.0",
+    description="AI Agent Safety & Jailbreak Detection Environment - Production Grade",
+    version="1.1.0",
     lifespan=lifespan,
 )
+
+# Add production middleware
+setup_production_middleware(app)
+
+# Add v1 API router (batch endpoints, model registry, WebSockets)
+from server.batch_api import v1_router  # noqa: E402
+
+app.include_router(v1_router)
 
 
 @app.post("/reset")
@@ -82,7 +138,7 @@ async def reset(
         return JSONResponse(content=response_data)
     except Exception as e:
         logger.error(f"reset() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.post("/step")
@@ -103,17 +159,19 @@ async def step(
 
     try:
         observation, reward, done, info = env.step(action)
-        return JSONResponse(content={
-            "observation": observation.model_dump(),
-            "reward": reward,
-            "done": done,
-            "info": info,
-        })
+        return JSONResponse(
+            content={
+                "observation": observation.model_dump(),
+                "reward": reward,
+                "done": done,
+                "info": info,
+            }
+        )
     except RuntimeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"step() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.get("/state")
@@ -134,17 +192,36 @@ async def state(
         return JSONResponse(content=state.model_dump())
     except Exception as e:
         logger.error(f"state() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
-    return JSONResponse(content={
-        "status": "healthy",
-        "service": "sentinel-env",
-        "version": "1.0.0",
-    })
+    """Health check endpoint with detailed service information."""
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "service": "sentinel-env",
+            "version": "1.1.0",
+            "features": {
+                "structured_logging": True,
+                "prometheus_metrics": True,
+                "sentry_tracking": SENTRY_DSN is not None,
+                "rate_limiting": True,
+                "concurrent_episodes": True,
+                "jailbreak_prompts": True,
+                "wandb_tracking": True,
+            },
+            "episode_manager": {
+                "max_episodes": 1000,
+                "ttl_seconds": 3600,
+            },
+            "rate_limiter": {
+                "max_requests": 100,
+                "window_seconds": 60,
+            },
+        }
+    )
 
 
 @app.get("/grade")
@@ -165,7 +242,7 @@ async def grade(
         return JSONResponse(content=result)
     except Exception as e:
         logger.error(f"grade() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.get("/resilience-profile")
@@ -186,7 +263,7 @@ async def resilience_profile(
         return JSONResponse(content=profile)
     except Exception as e:
         logger.error(f"resilience_profile() failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 def main():

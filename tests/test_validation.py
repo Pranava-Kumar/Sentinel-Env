@@ -19,6 +19,7 @@ from server.sentinel_environment import SentinelEnvironment
 
 # ── Requirement: Real-world task simulation ─────────────────────────────
 
+
 class TestRealWorldTasks:
     """Tasks must simulate real-world tasks, not games or toys."""
 
@@ -43,6 +44,7 @@ class TestRealWorldTasks:
 
 
 # ── Requirement: OpenEnv spec compliance ────────────────────────────────
+
 
 class TestOpenEnvSpecCompliance:
     """Must implement full OpenEnv interface."""
@@ -116,6 +118,7 @@ class TestOpenEnvSpecCompliance:
 
 # ── Requirement: Minimum 3 tasks with agent graders ─────────────────────
 
+
 class TestTasksWithGraders:
     """3+ tasks with difficulty range, graders produce 0.0-1.0 scores."""
 
@@ -162,8 +165,14 @@ class TestTasksWithGraders:
         """Grader must produce scores in [0.0, 1.0]."""
         # Perfect performance
         results_perfect = [
-            {"is_correct": True, "is_partial": False, "is_missed": False,
-             "is_false_positive": False, "is_safe_prompt": False, "reasoning_score": 0.8}
+            {
+                "is_correct": True,
+                "is_partial": False,
+                "is_missed": False,
+                "is_false_positive": False,
+                "is_safe_prompt": False,
+                "reasoning_score": 0.8,
+            }
             for _ in range(5)
         ]
         grade = grade_episode(results_perfect)
@@ -171,8 +180,14 @@ class TestTasksWithGraders:
 
         # Worst performance
         results_worst = [
-            {"is_correct": False, "is_partial": False, "is_missed": True,
-             "is_false_positive": False, "is_safe_prompt": False, "reasoning_score": 0.0}
+            {
+                "is_correct": False,
+                "is_partial": False,
+                "is_missed": True,
+                "is_false_positive": False,
+                "is_safe_prompt": False,
+                "reasoning_score": 0.0,
+            }
             for _ in range(5)
         ]
         grade = grade_episode(results_worst)
@@ -204,6 +219,7 @@ class TestTasksWithGraders:
 
 
 # ── Requirement: Meaningful reward function ─────────────────────────────
+
 
 class TestMeaningfulReward:
     """Reward provides trajectory feedback, partial progress, penalizes bad behavior."""
@@ -237,11 +253,13 @@ class TestMeaningfulReward:
         env.reset(task_name="basic-injection", seed=42)
 
         # First step to see if it's safe or attack
-        obs, _, _, _ = env.step(SentinelAction(
-            classification=ThreatCategory.SAFE,
-            reasoning="This appears to be a safe prompt",
-            recommended_action=RecommendedAction.ALLOW,
-        ))
+        obs, _, _, _ = env.step(
+            SentinelAction(
+                classification=ThreatCategory.SAFE,
+                reasoning="This prompt appears to be completely safe and benign in nature",
+                recommended_action=RecommendedAction.ALLOW,
+            )
+        )
 
         # Check step_result for safe prompt
         if not obs.is_safe_prompt:
@@ -252,41 +270,51 @@ class TestMeaningfulReward:
         env.reset(task_name="basic-injection", seed=42)
         # Get to a safe prompt
         for _ in range(20):
-            obs, _, done, info = env.step(SentinelAction(
-                classification=ThreatCategory.SAFE,
-                reasoning="This appears to be a safe prompt",
-                recommended_action=RecommendedAction.ALLOW,
-            ))
+            obs, _, done, info = env.step(
+                SentinelAction(
+                    classification=ThreatCategory.SAFE,
+                    reasoning="This prompt appears to be a safe and benign request",
+                    recommended_action=RecommendedAction.ALLOW,
+                )
+            )
             if obs.is_safe_prompt:
                 # Now flag it as attack (false positive)
                 env.reset(task_name="basic-injection", seed=42)
                 for _ in range(20):
-                    obs2, _, done2, _ = env.step(SentinelAction(
-                        classification=ThreatCategory.SAFE,
-                        reasoning="Safe",
-                        recommended_action=RecommendedAction.ALLOW,
-                    ))
+                    obs2, _, done2, _ = env.step(
+                        SentinelAction(
+                            classification=ThreatCategory.SAFE,
+                            reasoning="This appears to be a completely safe and benign prompt",
+                            recommended_action=RecommendedAction.ALLOW,
+                        )
+                    )
                     if obs2.is_safe_prompt:
                         # Force a false positive
-                        _, fp_reward, _, _ = env.step(SentinelAction(
-                            classification=ThreatCategory.INJECTION,
-                            reasoning="Suspicious",
-                            recommended_action=RecommendedAction.BLOCK,
-                        ))
+                        _, fp_reward, _, _ = env.step(
+                            SentinelAction(
+                                classification=ThreatCategory.INJECTION,
+                                reasoning="This prompt contains suspicious injection patterns",
+                                recommended_action=RecommendedAction.BLOCK,
+                            )
+                        )
                         # False positive should have lower reward than correct safe
                         env.reset(task_name="basic-injection", seed=42)
                         for _ in range(20):
-                            obs3, _, _, _ = env.step(SentinelAction(
-                                classification=ThreatCategory.SAFE,
-                                reasoning="Safe",
-                                recommended_action=RecommendedAction.ALLOW,
-                            ))
-                            if obs3.is_safe_prompt:
-                                _, correct_safe, _, _ = env.step(SentinelAction(
+                            obs3, _, _, _ = env.step(
+                                SentinelAction(
                                     classification=ThreatCategory.SAFE,
-                                    reasoning="This appears to be a safe prompt",
+                                    reasoning="This prompt appears to be safe and contains no threats",
                                     recommended_action=RecommendedAction.ALLOW,
-                                ))
+                                )
+                            )
+                            if obs3.is_safe_prompt:
+                                _, correct_safe, _, _ = env.step(
+                                    SentinelAction(
+                                        classification=ThreatCategory.SAFE,
+                                        reasoning="This appears to be a completely safe and benign request",
+                                        recommended_action=RecommendedAction.ALLOW,
+                                    )
+                                )
                                 assert fp_reward < correct_safe
                                 break
                         break
@@ -302,20 +330,23 @@ class TestMeaningfulReward:
         env.reset(task_name="basic-injection", seed=42)
 
         for _ in range(20):
-            obs, _, done, _ = env.step(SentinelAction(
-                classification=ThreatCategory.SAFE,
-                reasoning="This prompt appears to be safe and benign",
-                recommended_action=RecommendedAction.ALLOW,
-            ))
+            obs, _, done, _ = env.step(
+                SentinelAction(
+                    classification=ThreatCategory.SAFE,
+                    reasoning="This prompt appears to be safe and benign",
+                    recommended_action=RecommendedAction.ALLOW,
+                )
+            )
             if not obs.is_safe_prompt:
                 # We found an attack, now test miss vs detect
-                miss_reward = obs.resilience_metrics  # already recorded
+                _miss_reward = obs.resilience_metrics  # already recorded
                 break
             if done:
                 return  # No attacks in this episode
 
 
 # ── Requirement: Determinism and reproducibility ────────────────────────
+
 
 class TestDeterminism:
     """Seed-deterministic attack generation."""
@@ -324,7 +355,7 @@ class TestDeterminism:
         seq1 = generate_attack_sequence("basic-injection", seed=42)
         seq2 = generate_attack_sequence("basic-injection", seed=42)
         assert len(seq1) == len(seq2)
-        for a, b in zip(seq1, seq2):
+        for a, b in zip(seq1, seq2, strict=True):
             assert a["text"] == b["text"]
             assert a["ground_truth"] == b["ground_truth"]
 
@@ -342,6 +373,7 @@ class TestDeterminism:
 
 
 # ── Pydantic model validation ───────────────────────────────────────────
+
 
 class TestPydanticValidation:
     """Typed models must validate correctly."""
@@ -380,6 +412,7 @@ class TestPydanticValidation:
 
 # ── Resilience profile ──────────────────────────────────────────────────
 
+
 class TestResilienceProfile:
     """Resilience profile must generate valid output."""
 
@@ -387,11 +420,13 @@ class TestResilienceProfile:
         env = SentinelEnvironment()
         env.reset(task_name="basic-injection", seed=42)
         for _ in range(15):
-            obs, _, done, _ = env.step(SentinelAction(
-                classification=ThreatCategory.INJECTION,
-                reasoning="Detected injection attack with sufficient detail and explanation",
-                recommended_action=RecommendedAction.BLOCK,
-            ))
+            obs, _, done, _ = env.step(
+                SentinelAction(
+                    classification=ThreatCategory.INJECTION,
+                    reasoning="Detected injection attack with sufficient detail and explanation",
+                    recommended_action=RecommendedAction.BLOCK,
+                )
+            )
             if done:
                 break
 

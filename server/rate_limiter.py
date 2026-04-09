@@ -68,7 +68,7 @@ class RateLimiter:
 
     def cleanup(self) -> int:
         """Remove all expired entries. Call periodically.
-        
+
         Returns:
             Number of IPs cleaned up
         """

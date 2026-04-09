@@ -34,6 +34,7 @@ class SentinelEnvironment:
         self.attacks_correctly_detected: int = 0
         self.false_positives: int = 0
         self.total_attacks_presented: int = 0
+        self.conversation_history: list[dict[str, str]] = []
 
         # Running counters to avoid O(n²) iteration in _build_observation()
         self._running_correct = 0
@@ -63,6 +64,7 @@ class SentinelEnvironment:
         self.attacks_correctly_detected = 0
         self.false_positives = 0
         self.total_attacks_presented = 0
+        self.conversation_history = []
 
         # Reset running counters
         self._running_correct = 0
@@ -114,19 +116,13 @@ class SentinelEnvironment:
         Returns:
             Tuple of (step_result dict, reward float)
         """
-        # Compute reward
-        reward = compute_reward(
-            action,
-            ground_truth,
-            self.step_count,
-            self.max_steps,
-        )
+        # Grade the step first (single grading - no double-grading)
+        grade_result = grade_step(action.classification, ground_truth, action.reasoning)
 
-        # Track results
+        # Build step result
         step_result = {
             "ground_truth": ground_truth,
             "prediction": action.classification.value,
-            "reward": reward,
             "is_missed": ground_truth != "safe" and action.classification.value == "safe",
             "is_false_positive": ground_truth == "safe" and action.classification.value != "safe",
             "is_correct": action.classification.value == ground_truth,
@@ -137,9 +133,30 @@ class SentinelEnvironment:
         }
 
         # Enrich with grader result
-        grade_result = grade_step(action.classification, ground_truth, action.reasoning)
         step_result.update(grade_result)
+
+        # Compute reward using pre-computed grade result (avoids double-grading)
+        reward = compute_reward(
+            action,
+            ground_truth,
+            self.step_count,
+            self.max_steps,
+            grade_result=grade_result,
+        )
+        step_result["reward"] = reward
+
         self.episode_results.append(step_result)
+
+        # Record conversation turn
+        self.conversation_history.append(
+            {
+                "step": self.step_count,
+                "prompt": self.current_attack.get("text", "")[:200],
+                "classification": action.classification.value,
+                "reasoning": action.reasoning[:200],
+                "reward": round(reward, 2),
+            }
+        )
 
         # Update running counters
         if not step_result.get("is_safe_prompt", False):
@@ -224,7 +241,7 @@ class SentinelEnvironment:
 
         return SentinelObservation(
             user_prompt=self.current_attack["text"],
-            conversation_history=[],
+            conversation_history=list(self.conversation_history),  # Return copy
             attack_metadata=metadata,
             resilience_metrics=metrics,
             step_number=self.step_count + 1,
