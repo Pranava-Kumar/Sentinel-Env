@@ -194,10 +194,13 @@ class TestSecurityEdgeCases:
 
             # Should allow first few requests
             for _ in range(5):
-                assert await limiter.check_rate_limit("abuser-ip")
+                allowed, remaining = await limiter.check_rate_limit("abuser-ip")
+                assert allowed, f"Request should be allowed, remaining: {remaining}"
 
             # Should block subsequent requests
-            assert not await limiter.check_rate_limit("abuser-ip")
+            allowed, remaining = await limiter.check_rate_limit("abuser-ip")
+            assert not allowed, "Request should be blocked after exceeding limit"
+            assert remaining == 0, "Remaining should be 0 when blocked"
 
         asyncio.run(run_test())
 

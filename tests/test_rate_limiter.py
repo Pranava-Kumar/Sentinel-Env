@@ -16,28 +16,33 @@ class TestRateLimiter:
     @pytest.mark.asyncio
     async def test_allows_within_limit(self, limiter):
         for _ in range(5):
-            assert await limiter.check_rate_limit("127.0.0.1") is True
+            allowed, _ = await limiter.check_rate_limit("127.0.0.1")
+            assert allowed is True
 
     @pytest.mark.asyncio
     async def test_blocks_over_limit(self, limiter):
         for _ in range(5):
             await limiter.check_rate_limit("127.0.0.1")
-        assert await limiter.check_rate_limit("127.0.0.1") is False
+        allowed, _ = await limiter.check_rate_limit("127.0.0.1")
+        assert allowed is False
 
     @pytest.mark.asyncio
     async def test_different_ips_independent(self, limiter):
         for _ in range(5):
             await limiter.check_rate_limit("127.0.0.1")
-        assert await limiter.check_rate_limit("192.168.1.1") is True
+        allowed, _ = await limiter.check_rate_limit("192.168.1.1")
+        assert allowed is True
 
     @pytest.mark.asyncio
     async def test_window_expiry_resets_limit(self, limiter):
         for _ in range(5):
             await limiter.check_rate_limit("127.0.0.1")
-        assert await limiter.check_rate_limit("127.0.0.1") is False
+        allowed, _ = await limiter.check_rate_limit("127.0.0.1")
+        assert allowed is False
 
         await asyncio.sleep(1.1)
-        assert await limiter.check_rate_limit("127.0.0.1") is True
+        allowed, _ = await limiter.check_rate_limit("127.0.0.1")
+        assert allowed is True
 
     def test_cleanup_removes_expired(self):
         limiter = RateLimiter(max_requests=5, window_seconds=1)

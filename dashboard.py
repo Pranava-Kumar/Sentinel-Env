@@ -420,12 +420,16 @@ async def _update_metrics() -> tuple:
 
 def _sync_update_metrics():
     """Synchronous wrapper for async metric updates."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(_update_metrics())
-    finally:
-        loop.close()
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(_update_metrics(), loop)
+        return future.result(timeout=30)
+    else:
+        return asyncio.run(_update_metrics())
 
 
 async def _handle_test_prompt(prompt: str) -> str:
@@ -475,12 +479,16 @@ async def _handle_test_prompt(prompt: str) -> str:
 
 def _sync_handle_test_prompt(prompt: str) -> str:
     """Synchronous wrapper for prompt testing."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(_handle_test_prompt(prompt))
-    finally:
-        loop.close()
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(_handle_test_prompt(prompt), loop)
+        return future.result(timeout=30)
+    else:
+        return asyncio.run(_handle_test_prompt(prompt))
 
 
 def _build_dashboard_ui() -> gr.Blocks:

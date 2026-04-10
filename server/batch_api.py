@@ -19,7 +19,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from models import RecommendedAction, SentinelAction, ThreatCategory
-from server.sentinel_environment import SentinelEnvironment
 
 logger = structlog.get_logger()
 
@@ -174,11 +173,18 @@ async def batch_evaluate(request: BatchEvaluateRequest):
 
     Runs each prompt through the environment and returns classifications.
     """
+    # Lazy import to avoid circular dependency with app.py
+    from server.app import episode_manager
+
     start_time = time.time()
     results = []
 
-    env = SentinelEnvironment()
-    env.reset(task_name=request.task_name, seed=42)
+    episode_id, obs = await episode_manager.create_episode(task_name=request.task_name, seed=42)
+    env = await episode_manager.get_episode(episode_id)
+    if env is None:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(status_code=500, content={"detail": "Failed to create episode"})
 
     for i, prompt_text in enumerate(request.prompts):
         action = SentinelAction(
@@ -211,17 +217,21 @@ async def batch_evaluate(request: BatchEvaluateRequest):
 
 @v1_router.post("/batch/episodes", response_model=BatchEpisodesResponse)
 async def batch_episodes(request: BatchEpisodesRequest):
-    """Run N episodes in parallel and return aggregated results.
+    """Run N episodes and return aggregated results.
 
     Useful for benchmarking model performance across multiple episodes.
     """
+    # Lazy import to avoid circular dependency with app.py
+    from server.app import episode_manager
+
     start_time = time.time()
     episodes = []
 
     for ep_idx in range(request.num_episodes):
-        env = SentinelEnvironment()
-        seed = request.seed + ep_idx
-        _obs = env.reset(task_name=request.task_name, seed=seed)
+        episode_id, _obs = await episode_manager.create_episode(task_name=request.task_name, seed=request.seed + ep_idx)
+        env = await episode_manager.get_episode(episode_id)
+        if env is None:
+            continue
 
         episode_steps = []
         for step_num in range(env.max_steps):
@@ -240,7 +250,7 @@ async def batch_episodes(request: BatchEpisodesRequest):
         episodes.append(
             {
                 "episode_id": env.episode_id,
-                "seed": seed,
+                "seed": request.seed + ep_idx,
                 "score": grade["score"],
                 "detection_rate": grade["detection_rate"],
                 "false_positive_rate": grade["false_positive_rate"],
@@ -290,14 +300,18 @@ async def list_models():
 @v1_router.post("/models/{model_id}/evaluate")
 async def evaluate_model(model_id: str, request: BatchEpisodesRequest):
     """Evaluate a registered model."""
+    # Lazy import to avoid circular dependency with app.py
+    from server.app import episode_manager
+
     # Run episodes and record results
     start_time = time.time()
 
     results = []
     for ep_idx in range(request.num_episodes):
-        env = SentinelEnvironment()
-        seed = request.seed + ep_idx
-        _obs = env.reset(task_name=request.task_name, seed=seed)
+        episode_id, _obs = await episode_manager.create_episode(task_name=request.task_name, seed=request.seed + ep_idx)
+        env = await episode_manager.get_episode(episode_id)
+        if env is None:
+            continue
 
         for _ in range(env.max_steps):
             _obs, _reward, done, _info = env.step(request.model_action)
@@ -353,15 +367,18 @@ async def compare_models(model_ids: str = ""):
 @v1_router.websocket("/ws/metrics")
 async def websocket_metrics(websocket: WebSocket):
     """WebSocket stream of real-time metrics."""
+    # Lazy import to avoid circular dependency with app.py
+    from server.app import episode_manager
+
     await websocket.accept()
+    start_time = time.time()
 
     try:
         while True:
-            # Fetch current metrics
             metrics = {
                 "timestamp": time.time(),
-                "active_episodes": 0,  # Would connect to episode manager
-                "uptime_seconds": time.time(),
+                "active_episodes": episode_manager.active_episodes,
+                "uptime_seconds": time.time() - start_time,
             }
 
             await websocket.send_json(metrics)
@@ -373,16 +390,22 @@ async def websocket_metrics(websocket: WebSocket):
 
 @v1_router.websocket("/ws/episodes")
 async def websocket_episodes(websocket: WebSocket):
-    """WebSocket stream of episode completions."""
+    """WebSocket stream of episode information."""
+    # Lazy import to avoid circular dependency with app.py
+    from server.app import episode_manager
+
     await websocket.accept()
 
     try:
         while True:
-            # Placeholder: would stream episode results as they complete
+            # Stream current active episode summary
             episode_update = {
                 "timestamp": time.time(),
-                "event": "episode_complete",
-                "data": {},
+                "event": "episode_summary",
+                "data": {
+                    "active_episodes": episode_manager.active_episodes,
+                    "max_episodes": episode_manager.max_episodes,
+                },
             }
 
             await websocket.send_json(episode_update)

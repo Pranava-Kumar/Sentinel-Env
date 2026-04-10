@@ -20,8 +20,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Core dev tools
 dev = [
-    # Core dev tools
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
     "pytest-cov>=5.0",
@@ -32,7 +32,10 @@ dev = [
     "pre-commit>=4.5.0",
     "hypothesis>=6.150.0",
     "structlog>=25.5.0",
-    # Observability
+]
+
+# Observability & monitoring
+observability = [
     "opentelemetry-api",
     "opentelemetry-sdk",
     "opentelemetry-instrumentation-fastapi",
@@ -41,11 +44,17 @@ dev = [
     "trackio>=0.1.0",
     "sentry-sdk>=2.57.0",
     "prometheus-client>=0.24.0",
-    # LLM security testing
+]
+
+# LLM security testing (garak)
+llm-security = [
     "garak>=0.14.0",
     "hud-python>=0.5.0",
     "litellm>=1.82.0",
-    # LLM/ML dependencies (required by garak, hud, etc.)
+]
+
+# ML/LLM model dependencies (required by garak and training)
+ml = [
     "transformers>=5.5.0",
     "torch>=2.11.0",
     "accelerate>=1.13.0",
@@ -54,6 +63,10 @@ dev = [
     "tokenizers>=0.22.0",
     "tiktoken>=0.12.0",
     "datasets>=3.6.0",
+]
+
+# LLM provider integrations
+llm-providers = [
     "langchain>=1.2.0",
     "langchain-core>=1.2.0",
     "langgraph>=1.1.0",
@@ -62,9 +75,17 @@ dev = [
     "mistralai>=1.5.0",
     "ollama>=0.6.0",
     "replicate>=1.0.0",
+]
+
+# Translation & NLP tools
+translation = [
     "deepl>=1.17.0",
     "google-cloud-translate>=3.25.0",
     "nltk>=3.9.0",
+]
+
+# Graph analysis
+graph = [
     "networkx>=3.6.0",
 ]
 
@@ -74,6 +95,7 @@ server = "server.app:main"
 
 [tool.uv]
 managed = true
+dev-dependencies = ["sentinel-env[dev,observability]"]
 
 # ── Ruff Configuration ──────────────────────────────────────────────
 [tool.ruff]

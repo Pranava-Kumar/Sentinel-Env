@@ -55,6 +55,14 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
             # Add request ID to response headers
             response.headers["X-Request-ID"] = request_id
 
+            # Add rate limit headers if available
+            rate_limit = getattr(request.state, "rate_limit_limit", None)
+            rate_remaining = getattr(request.state, "rate_limit_remaining", None)
+            if rate_limit is not None:
+                response.headers["X-RateLimit-Limit"] = str(rate_limit)
+            if rate_remaining is not None:
+                response.headers["X-RateLimit-Remaining"] = str(rate_remaining)
+
             # Log response
             process_time = time.time() - start_time
             logger.info(

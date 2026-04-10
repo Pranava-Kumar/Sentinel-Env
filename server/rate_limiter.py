@@ -29,7 +29,7 @@ class RateLimiter:
         self.max_entries = max_entries
         self.requests: OrderedDict[str, deque[float]] = OrderedDict()
 
-    async def check_rate_limit(self, client_ip: str) -> bool:
+    async def check_rate_limit(self, client_ip: str) -> tuple[bool, int]:
         """Check if request is within rate limit.
 
         Uses deque.popleft() for O(1) cleanup instead of list comprehension.
@@ -38,10 +38,8 @@ class RateLimiter:
             client_ip: Client IP address
 
         Returns:
-            True if request is allowed, False if rate limited
+            Tuple of (allowed: bool, remaining: int) — remaining count of requests left.
         """
-        from collections import deque
-
         now = time.time()
         window_start = now - self.window_seconds
 
@@ -56,21 +54,27 @@ class RateLimiter:
 
         # Check limit
         if len(ip_requests) >= self.max_requests:
-            return False
+            return False, 0
 
         ip_requests.append(now)
+
+        remaining = self.max_requests - len(ip_requests)
+
+        # Proactive cleanup: when approaching max_entries, clean expired entries
+        if len(self.requests) > self.max_entries * 0.8:
+            self._cleanup_expired()
 
         # Evict oldest entries if we've exceeded max_entries
         if len(self.requests) > self.max_entries:
             self.requests.popitem(last=False)
 
-        return True
+        return True, remaining
 
-    def cleanup(self) -> int:
-        """Remove all expired entries. Call periodically.
+    def _cleanup_expired(self) -> int:
+        """Remove all expired timestamps from all IPs.
 
         Returns:
-            Number of IPs cleaned up
+            Number of IPs fully removed.
         """
         now = time.time()
         window_start = now - self.window_seconds
@@ -88,3 +92,11 @@ class RateLimiter:
             cleaned += 1
 
         return cleaned
+
+    def cleanup(self) -> int:
+        """Remove all expired entries. Call periodically.
+
+        Returns:
+            Number of IPs cleaned up
+        """
+        return self._cleanup_expired()

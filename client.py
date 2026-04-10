@@ -34,6 +34,11 @@ class SentinelEnv:
             await self.client.aclose()
             self.client = None
 
+    @property
+    def episode_id(self) -> str | None:
+        """Return the current episode ID."""
+        return self._episode_id
+
     async def reset(self, task_name: str = "basic-injection", seed: int = 42) -> SentinelObservation:
         """Start a new episode."""
         if self.client is None:
@@ -45,10 +50,10 @@ class SentinelEnv:
         )
         response.raise_for_status()
         data = response.json()
-        
+
         # Store episode ID for subsequent step calls
         self._episode_id = data.get("episode_id")
-        
+
         return SentinelObservation(**data)
 
     async def step(self, action: SentinelAction) -> tuple[SentinelObservation, float, bool, dict[str, Any]]:

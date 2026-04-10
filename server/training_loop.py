@@ -117,7 +117,7 @@ class ExperienceReplayBuffer:
     def __init__(self, max_size: int = 500):
         self.buffer: deque[dict[str, Any]] = deque(maxlen=max_size)
 
-    def add_hard_case(self, attack_text: str, ground_truth: str, attack_type: str):
+    def add_hard_case(self, attack_text: str, ground_truth: str, attack_type: str) -> None:
         """Add a hard case to the replay buffer."""
         self.buffer.append(
             {
@@ -301,7 +301,7 @@ class SentinelTrainer:
             logger.error("Failed to load checkpoint", error=str(e))
             return False
 
-    def save_checkpoint(self):
+    def save_checkpoint(self) -> None:
         """Save current training state to checkpoint."""
         checkpoint_path = self.checkpoint_dir / f"checkpoint_{self.state.episode_count:06d}.json"
 
@@ -407,7 +407,7 @@ class SentinelTrainer:
             safe_alternative=None,
         )
 
-    def _update_curriculum(self, result: EpisodeResult):
+    def _update_curriculum(self, result: EpisodeResult) -> None:
         """Auto-curriculum: adjust difficulty based on performance.
 
         If detection rate is high and FP rate is low, increase difficulty.
@@ -434,7 +434,7 @@ class SentinelTrainer:
             self.state.current_difficulty[task] = new_diff
             logger.info("Difficulty decreased", task=task, new_difficulty=new_diff)
 
-    def _update_task_weights(self):
+    def _update_task_weights(self) -> None:
         """Adjust task weights based on performance.
 
         Increase weight for tasks with lower performance to focus training.

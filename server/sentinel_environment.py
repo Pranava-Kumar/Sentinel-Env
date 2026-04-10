@@ -13,8 +13,8 @@ from models import (
     SentinelObservation,
     SentinelState,
 )
-from server.attack_engine import EPISODE_LENGTHS, generate_attack_sequence
-from server.grader import grade_episode, grade_step
+from server.attack_provider import EPISODE_LENGTHS, generate_attack_sequence
+from server.grader import DETECTION_WEIGHT, FP_RATE_WEIGHT, REASONING_WEIGHT, grade_episode, grade_step
 from server.resilience_profile import generate_resilience_profile
 from server.reward_shaper import compute_reward
 
@@ -260,4 +260,7 @@ class SentinelEnvironment:
 
         detection_rate = self._running_correct / self._running_total_attacks
         fp_rate = self._running_fp / max(self._running_total_safe, 1)
-        return round(0.6 * detection_rate + 0.25 * (1 - fp_rate) + 0.15 * 0.5, 2)
+        return round(
+            DETECTION_WEIGHT * detection_rate + FP_RATE_WEIGHT * (1 - fp_rate) + REASONING_WEIGHT * 0.5,
+            2,
+        )

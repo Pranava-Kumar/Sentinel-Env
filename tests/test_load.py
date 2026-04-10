@@ -27,7 +27,7 @@ class TestConcurrentEpisodes:
         manager = EpisodeManager(max_episodes=100, ttl_seconds=60)
 
         async def create_episode(i: int):
-            episode_id, obs = manager.create_episode(
+            episode_id, obs = await manager.create_episode(
                 task_name="basic-injection",
                 seed=i,
             )
@@ -52,11 +52,11 @@ class TestConcurrentEpisodes:
         # Create episodes
         episode_ids = []
         for i in range(20):
-            eid, _ = manager.create_episode(task_name="basic-injection", seed=i)
+            eid, _ = await manager.create_episode(task_name="basic-injection", seed=i)
             episode_ids.append(eid)
 
         async def step_episode(episode_id: str, seed: int):
-            env = manager.get_episode(episode_id)
+            env = await manager.get_episode(episode_id)
             if env is None:
                 return None
             action = SentinelAction(
@@ -82,7 +82,7 @@ class TestConcurrentEpisodes:
 
         # Create more episodes than max
         for i in range(100):
-            manager.create_episode(task_name="basic-injection", seed=i)
+            await manager.create_episode(task_name="basic-injection", seed=i)
 
         # Should not exceed max
         assert manager.active_episodes <= 50
@@ -94,13 +94,13 @@ class TestConcurrentEpisodes:
 
         # Create episodes
         for i in range(20):
-            manager.create_episode(task_name="basic-injection", seed=i)
+            await manager.create_episode(task_name="basic-injection", seed=i)
 
         # Wait for expiry
         await asyncio.sleep(0.2)
 
         # Trigger cleanup
-        manager.cleanup_expired()
+        await manager.cleanup_expired()
 
         assert manager.active_episodes == 0
 
@@ -115,10 +115,12 @@ class TestRateLimiterUnderLoad:
 
         # First 10 should succeed
         for _ in range(10):
-            assert await limiter.check_rate_limit("test-ip")
+            allowed, _ = await limiter.check_rate_limit("test-ip")
+            assert allowed is True
 
         # Next should be limited
-        assert not await limiter.check_rate_limit("test-ip")
+        allowed, _ = await limiter.check_rate_limit("test-ip")
+        assert allowed is False
 
     @pytest.mark.asyncio
     async def test_rate_limiter_multiple_ips(self):
@@ -128,8 +130,10 @@ class TestRateLimiterUnderLoad:
         # Each IP should have independent limit
         for ip in ["ip1", "ip2", "ip3"]:
             for _ in range(5):
-                assert await limiter.check_rate_limit(ip)
-            assert not await limiter.check_rate_limit(ip)
+                allowed, _ = await limiter.check_rate_limit(ip)
+                assert allowed is True
+            allowed, _ = await limiter.check_rate_limit(ip)
+            assert allowed is False
 
     @pytest.mark.asyncio
     async def test_rate_limiter_max_entries_eviction(self):
@@ -155,10 +159,10 @@ class TestMemoryStability:
         # Create and let episodes expire repeatedly
         for batch in range(10):
             for i in range(50):
-                manager.create_episode(task_name="basic-injection", seed=batch * 100 + i)
+                await manager.create_episode(task_name="basic-injection", seed=batch * 100 + i)
 
             await asyncio.sleep(0.2)
-            manager.cleanup_expired()
+            await manager.cleanup_expired()
 
         # Should not exceed max_episodes
         assert manager.active_episodes <= 100
@@ -191,28 +195,30 @@ class TestMemoryStability:
 class TestEpisodeManagerScalability:
     """Test episode manager scalability."""
 
-    def test_active_episodes_count_accuracy(self):
+    @pytest.mark.asyncio
+    async def test_active_episodes_count_accuracy(self):
         """Active episodes count should be accurate."""
         manager = EpisodeManager(max_episodes=1000, ttl_seconds=60)
 
         for i in range(100):
-            manager.create_episode(task_name="basic-injection", seed=i)
+            await manager.create_episode(task_name="basic-injection", seed=i)
 
         assert manager.active_episodes == 100
 
         # Remove some
         episode_ids = list(manager.episodes.keys())[:50]
         for eid in episode_ids:
-            manager.remove_episode(eid)
+            await manager.remove_episode(eid)
 
         assert manager.active_episodes == 50
 
-    def test_max_episodes_configuration(self):
+    @pytest.mark.asyncio
+    async def test_max_episodes_configuration(self):
         """Max episodes configuration should be respected."""
         manager = EpisodeManager(max_episodes=10, ttl_seconds=60)
 
         for i in range(20):
-            manager.create_episode(task_name="basic-injection", seed=i)
+            await manager.create_episode(task_name="basic-injection", seed=i)
 
         assert manager.active_episodes <= 10
 
@@ -220,13 +226,14 @@ class TestEpisodeManagerScalability:
 class TestPerformance:
     """Basic performance benchmarks."""
 
-    def test_episode_creation_performance(self):
+    @pytest.mark.asyncio
+    async def test_episode_creation_performance(self):
         """Episode creation should be fast."""
         manager = EpisodeManager(max_episodes=1000, ttl_seconds=60)
 
         start = time.time()
         for i in range(100):
-            manager.create_episode(task_name="basic-injection", seed=i)
+            await manager.create_episode(task_name="basic-injection", seed=i)
         elapsed = time.time() - start
 
         # Should complete 100 creations in under 1 second

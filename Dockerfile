@@ -26,12 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && \
 # Copy installed dependencies from builder
 COPY --from=builder /install /usr/local
 
-# Copy application code
+# Create non-root user for security BEFORE copying files with chown
+RUN adduser --disabled-password --gecos '' appuser
+
+# Copy application code with correct ownership
 COPY --chown=appuser:appuser . .
 
-# Create non-root user for security
-RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
+# Set proper ownership recursively
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
 USER appuser
 
 # Expose ports: main app + Prometheus metrics

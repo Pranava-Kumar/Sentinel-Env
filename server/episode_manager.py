@@ -1,8 +1,11 @@
 """Episode lifecycle management for concurrent support.
 
 Manages multiple simultaneous episodes with session-based tracking.
+Thread-safe via asyncio.Lock for all mutation operations.
 """
 
+import asyncio
+import contextlib
 import time
 import uuid
 from typing import Any
@@ -22,8 +25,10 @@ class EpisodeManager:
         self.ttl_seconds = ttl_seconds
         self.episodes: dict[str, SentinelEnvironment] = {}
         self.episode_metadata: dict[str, dict] = {}
+        self._lock = asyncio.Lock()
+        self._cleanup_task: asyncio.Task | None = None
 
-    def create_episode(self, task_name: str, seed: int) -> tuple[str, Any]:
+    async def create_episode(self, task_name: str, seed: int) -> tuple[str, Any]:
         """Create a new episode and return its ID with the initial observation.
 
         Args:
@@ -33,24 +38,25 @@ class EpisodeManager:
         Returns:
             Tuple of (episode_id, initial_observation)
         """
-        # Evict old episodes if at capacity
-        if len(self.episodes) >= self.max_episodes:
-            self._evict_old_episodes()
+        async with self._lock:
+            # Evict old episodes if at capacity
+            if len(self.episodes) >= self.max_episodes:
+                await self._evict_old_episodes()
 
-        episode_id = str(uuid.uuid4())
-        env = SentinelEnvironment()
-        observation = env.reset(task_name=task_name, seed=seed)
+            episode_id = str(uuid.uuid4())
+            env = SentinelEnvironment()
+            observation = env.reset(task_name=task_name, seed=seed)
 
-        self.episodes[episode_id] = env
-        self.episode_metadata[episode_id] = {
-            "created_at": time.time(),
-            "task_name": task_name,
-            "seed": seed,
-        }
+            self.episodes[episode_id] = env
+            self.episode_metadata[episode_id] = {
+                "created_at": time.time(),
+                "task_name": task_name,
+                "seed": seed,
+            }
 
-        return episode_id, observation
+            return episode_id, observation
 
-    def get_episode(self, episode_id: str) -> SentinelEnvironment | None:
+    async def get_episode(self, episode_id: str) -> SentinelEnvironment | None:
         """Get an episode by ID.
 
         Args:
@@ -59,12 +65,13 @@ class EpisodeManager:
         Returns:
             SentinelEnvironment instance or None if not found
         """
-        episode = self.episodes.get(episode_id)
-        if episode:
-            self.episode_metadata[episode_id]["last_accessed"] = time.time()
-        return episode
+        async with self._lock:
+            episode = self.episodes.get(episode_id)
+            if episode and episode_id in self.episode_metadata:
+                self.episode_metadata[episode_id]["last_accessed"] = time.time()
+            return episode
 
-    def remove_episode(self, episode_id: str) -> bool:
+    async def remove_episode(self, episode_id: str) -> bool:
         """Remove an episode.
 
         Args:
@@ -73,28 +80,33 @@ class EpisodeManager:
         Returns:
             True if removed, False if not found
         """
-        if episode_id in self.episodes:
-            del self.episodes[episode_id]
-            del self.episode_metadata[episode_id]
-            return True
-        return False
+        async with self._lock:
+            if episode_id in self.episodes:
+                del self.episodes[episode_id]
+                self.episode_metadata.pop(episode_id, None)
+                return True
+            return False
 
-    def cleanup_expired(self) -> int:
+    async def cleanup_expired(self) -> int:
         """Remove episodes older than TTL.
 
         Returns:
             Number of episodes removed
         """
-        now = time.time()
-        expired = [eid for eid, meta in self.episode_metadata.items() if now - meta["created_at"] > self.ttl_seconds]
+        async with self._lock:
+            now = time.time()
+            expired = [
+                eid for eid, meta in self.episode_metadata.items() if now - meta["created_at"] > self.ttl_seconds
+            ]
 
-        for episode_id in expired:
-            self.remove_episode(episode_id)
+            for episode_id in expired:
+                del self.episodes[episode_id]
+                del self.episode_metadata[episode_id]
 
-        return len(expired)
+            return len(expired)
 
-    def _evict_old_episodes(self):
-        """Evict oldest episodes by creation time."""
+    async def _evict_old_episodes(self):
+        """Evict oldest episodes by creation time. Must be called with lock held."""
         if not self.episode_metadata:
             return
 
@@ -106,7 +118,37 @@ class EpisodeManager:
         num_to_evict = max(1, len(sorted_episodes) // 10)
 
         for episode_id, _ in sorted_episodes[:num_to_evict]:
-            self.remove_episode(episode_id)
+            del self.episodes[episode_id]
+            del self.episode_metadata[episode_id]
+
+    async def start_background_cleanup(self, interval_seconds: int = 300) -> None:
+        """Start a periodic background cleanup task.
+
+        Args:
+            interval_seconds: How often to run cleanup (default 5 minutes)
+        """
+
+        async def _cleanup_loop():
+            while True:
+                await asyncio.sleep(interval_seconds)
+                try:
+                    removed = await self.cleanup_expired()
+                    if removed:
+                        from structlog import get_logger
+
+                        get_logger().info("Background cleanup removed expired episodes", removed=removed)
+                except Exception:
+                    pass  # Never let cleanup crash the loop
+
+        self._cleanup_task = asyncio.create_task(_cleanup_loop(), name="episode-cleanup")
+
+    async def stop_background_cleanup(self) -> None:
+        """Stop the periodic background cleanup task."""
+        if self._cleanup_task and not self._cleanup_task.done():
+            self._cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._cleanup_task
+            self._cleanup_task = None
 
     @property
     def active_episodes(self) -> int:

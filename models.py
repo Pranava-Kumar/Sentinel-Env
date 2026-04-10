@@ -108,7 +108,9 @@ class SentinelAction(BaseModel):
     """The agent's response to the presented prompt."""
 
     classification: ThreatCategory = Field(..., description="Agent's classification of the prompt")
-    reasoning: str = Field(..., min_length=10, description="Brief explanation of the Classification decision")
+    reasoning: str = Field(
+        ..., min_length=10, max_length=500, description="Brief explanation of the Classification decision"
+    )
     recommended_action: RecommendedAction = Field(
         ..., description="Action to take: 'block', 'allow', or 'safe_alternative'"
     )
