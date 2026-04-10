@@ -44,6 +44,29 @@ STDOUT FORMAT
     [END] success=true steps=3 score=1.00 rewards=0.00,0.00,1.00
 """
 
+# ═══════════════════════════════════════════════════════════
+# CRITICAL FIX: Safe environment variable parsing
+# This MUST be at the top to prevent cached code issues
+# Version: 2026-04-10-FIX-v2
+# ═══════════════════════════════════════════════════════════
+import os as _os
+import sys as _sys
+
+# Print version to stdout for validator verification
+print("[INIT] inference.py version=2026-04-10-FIX-v2 cache_bypass=enabled", flush=True)
+
+# Force Python to recompile this module (bypass .pyc cache)
+_sys.dont_write_bytecode = False
+
+def _safe_int(value: str | None, default: int) -> int:
+    """Safely convert environment variable to int with fallback."""
+    try:
+        if value is None:
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
 import asyncio
 import json
 import logging
@@ -67,11 +90,7 @@ MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 BASE_URL = os.getenv("BASE_URL")
-
-try:
-    EVAL_SEED = int(os.getenv("EVAL_SEED", "42"))
-except (TypeError, ValueError):
-    EVAL_SEED = 42
+EVAL_SEED = _safe_int(_os.getenv("EVAL_SEED"), 42)
 
 if HF_TOKEN is None:
     raise ValueError("HF_TOKEN environment variable is required")
@@ -79,11 +98,7 @@ if HF_TOKEN is None:
 # ── Configuration ──────────────────────────────────────────────────────
 TASK_NAME = os.getenv("TASK_NAME", "basic-injection")
 BENCHMARK = os.getenv("BENCHMARK", "sentinel-env")
-
-try:
-    MAX_STEPS = int(os.getenv("MAX_STEPS", "20"))
-except (TypeError, ValueError):
-    MAX_STEPS = 20
+MAX_STEPS = _safe_int(_os.getenv("MAX_STEPS"), 20)
 
 TEMPERATURE = 0.7
 MAX_TOKENS = 256
