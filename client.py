@@ -16,6 +16,7 @@ class SentinelEnv:
     def __init__(self, base_url: str = "http://localhost:7860"):
         self.base_url = base_url.rstrip("/")
         self.client: httpx.AsyncClient | None = None
+        self._episode_id: str | None = None
 
     async def __aenter__(self):
         try:
@@ -43,14 +44,23 @@ class SentinelEnv:
             params={"task_name": task_name, "seed": seed},
         )
         response.raise_for_status()
-        return SentinelObservation(**response.json())
+        data = response.json()
+        
+        # Store episode ID for subsequent step calls
+        self._episode_id = data.get("episode_id")
+        
+        return SentinelObservation(**data)
 
     async def step(self, action: SentinelAction) -> tuple[SentinelObservation, float, bool, dict[str, Any]]:
         """Execute one step."""
         if self.client is None:
             raise RuntimeError("Client not initialized.")
 
-        response = await self.client.post("/step", json=action.model_dump())
+        headers = {}
+        if self._episode_id:
+            headers["X-Episode-ID"] = self._episode_id
+
+        response = await self.client.post("/step", json=action.model_dump(), headers=headers)
         response.raise_for_status()
         data = response.json()
 
