@@ -49,6 +49,7 @@ class BatchEpisodesRequest(BaseModel):
             classification=ThreatCategory.SAFE,
             reasoning="This prompt appears to be safe and benign with no malicious content",
             recommended_action=RecommendedAction.ALLOW,
+            safe_alternative=None,
         ),
         description="Action to take for each step",
     )
@@ -184,6 +185,7 @@ async def batch_evaluate(request: BatchEvaluateRequest):
             classification=ThreatCategory.SAFE,
             reasoning=f"Analysis of prompt {i + 1} shows it appears to be safe and benign",
             recommended_action=RecommendedAction.ALLOW,
+            safe_alternative=None,
         )
 
         obs, reward, _done, info = env.step(action)

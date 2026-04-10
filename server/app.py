@@ -68,6 +68,8 @@ rate_limiter = RateLimiter(max_requests=100, window_seconds=60, max_entries=1000
 
 
 async def get_client_ip(request: Request) -> str:
+    if request.client is None:
+        return "unknown"
     return request.client.host
 
 

@@ -223,11 +223,13 @@ class SentinelTrainer:
     - W&B experiment tracking
     """
 
-    def __init__(self, config: TrainingConfig | None = None):
+    def __init__(self, config: TrainingConfig | None = None) -> None:
         self.config = config or TrainingConfig()
         self.state = TrainingState()
         self.replay_buffer = ExperienceReplayBuffer(self.config.replay_buffer_size)
         self.augmenter = AdversarialAugmenter(self.config.mutation_rate)
+        self.tracker: Any = None
+        self.trackio_tracker: Any = None
 
         # Initialize task weights (equal by default)
         for task in self.config.tasks:
@@ -402,6 +404,7 @@ class SentinelTrainer:
             classification=classification,
             reasoning=reasoning,
             recommended_action=recommended_action,
+            safe_alternative=None,
         )
 
     def _update_curriculum(self, result: EpisodeResult):

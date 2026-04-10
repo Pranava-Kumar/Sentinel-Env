@@ -1,4 +1,5 @@
 """Tests for inference logging format compliance."""
+
 import sys
 from io import StringIO
 

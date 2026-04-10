@@ -72,8 +72,7 @@ def generate_resilience_profile(
     profile["overall_detection_rate"] = round(total_detected / max(total_attacks, 1), 2)
     profile["overall_false_positive_rate"] = round(total_fp / max(total_safe, 1), 2)
     profile["resilience_score"] = round(
-        0.6 * profile["overall_detection_rate"]
-        + 0.4 * (1 - profile["overall_false_positive_rate"]),
+        0.6 * profile["overall_detection_rate"] + 0.4 * (1 - profile["overall_false_positive_rate"]),
         2,
     )
 

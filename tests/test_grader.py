@@ -63,8 +63,14 @@ class TestGradeStep:
 class TestGradeEpisode:
     def test_perfect_episode(self):
         results = [
-            {"is_correct": True, "is_partial": False, "is_missed": False,
-             "is_false_positive": False, "is_safe_prompt": False, "reasoning_score": 0.8}
+            {
+                "is_correct": True,
+                "is_partial": False,
+                "is_missed": False,
+                "is_false_positive": False,
+                "is_safe_prompt": False,
+                "reasoning_score": 0.8,
+            }
             for _ in range(5)
         ]
         grade = grade_episode(results)
@@ -73,8 +79,14 @@ class TestGradeEpisode:
 
     def test_all_missed(self):
         results = [
-            {"is_correct": False, "is_partial": False, "is_missed": True,
-             "is_false_positive": False, "is_safe_prompt": False, "reasoning_score": 0.0}
+            {
+                "is_correct": False,
+                "is_partial": False,
+                "is_missed": True,
+                "is_false_positive": False,
+                "is_safe_prompt": False,
+                "reasoning_score": 0.0,
+            }
             for _ in range(5)
         ]
         grade = grade_episode(results)
@@ -88,8 +100,14 @@ class TestGradeEpisode:
     def test_score_range(self):
         """All scores must be in [0.0, 1.0]."""
         results = [
-            {"is_correct": True, "is_partial": False, "is_missed": False,
-             "is_false_positive": False, "is_safe_prompt": False, "reasoning_score": 1.0}
+            {
+                "is_correct": True,
+                "is_partial": False,
+                "is_missed": False,
+                "is_false_positive": False,
+                "is_safe_prompt": False,
+                "reasoning_score": 1.0,
+            }
             for _ in range(10)
         ]
         grade = grade_episode(results)

@@ -34,7 +34,7 @@ class SentinelEnvironment:
         self.attacks_correctly_detected: int = 0
         self.false_positives: int = 0
         self.total_attacks_presented: int = 0
-        self.conversation_history: list[dict[str, str]] = []
+        self.conversation_history: list[dict[str, Any]] = []
 
         # Running counters to avoid O(n²) iteration in _build_observation()
         self._running_correct = 0
@@ -119,16 +119,20 @@ class SentinelEnvironment:
         # Grade the step first (single grading - no double-grading)
         grade_result = grade_step(action.classification, ground_truth, action.reasoning)
 
+        # current_attack is guaranteed to be set by reset() before step() is called
+        attack = self.current_attack
+        assert attack is not None
+
         # Build step result
-        step_result = {
+        step_result: dict[str, Any] = {
             "ground_truth": ground_truth,
             "prediction": action.classification.value,
             "is_missed": ground_truth != "safe" and action.classification.value == "safe",
             "is_false_positive": ground_truth == "safe" and action.classification.value != "safe",
             "is_correct": action.classification.value == ground_truth,
             "is_partial": False,
-            "attack_type": self.current_attack.get("attack_type", "none"),
-            "is_safe_prompt": not self.current_attack.get("is_attack", True),
+            "attack_type": attack.get("attack_type", "none"),
+            "is_safe_prompt": not attack.get("is_attack", True),
             "reasoning_score": 0.0,
         }
 
@@ -151,7 +155,7 @@ class SentinelEnvironment:
         self.conversation_history.append(
             {
                 "step": self.step_count,
-                "prompt": self.current_attack.get("text", "")[:200],
+                "prompt": attack.get("text", "")[:200],
                 "classification": action.classification.value,
                 "reasoning": action.reasoning[:200],
                 "reward": round(reward, 2),
@@ -169,7 +173,7 @@ class SentinelEnvironment:
                 self._running_fp += 1
 
         # Track statistics
-        if self.current_attack.get("is_attack", False):
+        if attack.get("is_attack", False):
             self.total_attacks_presented += 1
             self._running_attacks_presented += 1
             if step_result["is_correct"]:

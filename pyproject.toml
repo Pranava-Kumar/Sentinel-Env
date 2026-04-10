@@ -119,7 +119,7 @@ line-ending = "auto"
 
 # ── MyPy Configuration ──────────────────────────────────────────────
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -131,7 +131,7 @@ warn_unused_ignores = true
 exclude = ["OpenENV RL Challenge", "tests/", "tools/", "scripts/"]
 
 [[tool.mypy.overrides]]
-module = ["server.attacks.*", "openenv_core"]
+module = ["server.attacks.*", "openenv_core", "client", "models", "inference_logging"]
 ignore_missing_imports = true
 
 # ── Bandit Configuration ────────────────────────────────────────────

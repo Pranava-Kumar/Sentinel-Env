@@ -35,8 +35,14 @@ class TestComputeReward:
     def test_reward_bounds(self):
         """All rewards must be in [0.0, 1.0]."""
         for pred in ThreatCategory:
-            for actual in ["safe", "injection", "jailbreak", "command_injection",
-                           "authority_impersonation", "encoded_payload"]:
+            for actual in [
+                "safe",
+                "injection",
+                "jailbreak",
+                "command_injection",
+                "authority_impersonation",
+                "encoded_payload",
+            ]:
                 action = SentinelAction(
                     classification=pred,
                     reasoning="Test reasoning with enough words to get a decent score here",

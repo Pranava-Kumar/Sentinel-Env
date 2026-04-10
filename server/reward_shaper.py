@@ -39,4 +39,4 @@ def compute_reward(
     if step_number >= max_steps - 1 and not (grade_result or {}).get("is_correct", False):
         reward -= 0.05
 
-    return round(max(min(reward, 1.0), 0.0), 2)
+    return float(round(max(min(reward, 1.0), 0.0), 2))

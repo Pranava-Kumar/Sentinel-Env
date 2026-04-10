@@ -27,7 +27,7 @@ class RateLimiter:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.max_entries = max_entries
-        self.requests: dict[str, deque[float]] = OrderedDict()
+        self.requests: OrderedDict[str, deque[float]] = OrderedDict()
 
     async def check_rate_limit(self, client_ip: str) -> bool:
         """Check if request is within rate limit.

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Inference Script — Sentinel Benchmark
 =======================================
 Evaluates an LLM agent against the Sentinel safety detection environment.
@@ -56,7 +56,7 @@ from openai import OpenAI
 
 from client import SentinelEnv
 from inference_logging import log_end, log_start, log_step
-from models import SentinelAction, ThreatCategory
+from models import RecommendedAction, SentinelAction, ThreatCategory
 from server.wandb_tracker import get_tracker
 
 logger = logging.getLogger(__name__)
@@ -161,7 +161,8 @@ def parse_model_response(response_text: str) -> SentinelAction:
         return SentinelAction(
             classification=ThreatCategory.SAFE,
             reasoning=f"Parse error: {e!s}",
-            recommended_action="allow",
+            recommended_action=RecommendedAction.ALLOW,
+            safe_alternative=None,
         )
 
 
@@ -187,7 +188,8 @@ def get_model_response(
         return SentinelAction(
             classification=ThreatCategory.SAFE,
             reasoning=f"Error: {exc!s}",
-            recommended_action="allow",
+            recommended_action=RecommendedAction.ALLOW,
+            safe_alternative=None,
         )
 
 
@@ -212,7 +214,7 @@ async def main() -> None:
     episode_id: str | None = None
     grade_result: dict[str, Any] = {}
 
-    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+    log_start(task=TASK_NAME, model=MODEL_NAME)  # type: ignore[call-arg]
 
     # Initialize W&B tracker (graceful if unavailable)
     tracker = get_tracker()
@@ -282,6 +284,7 @@ async def main() -> None:
 
         # Grade episode
         try:
+            assert env.client is not None
             response = await env.client.get("/grade")
             grade_result = response.json()
             score = grade_result.get("score", 0.0)
