@@ -67,23 +67,24 @@ MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 BASE_URL = os.getenv("BASE_URL")
-EVAL_SEED = int(os.getenv("EVAL_SEED", "42"))
+
+try:
+    EVAL_SEED = int(os.getenv("EVAL_SEED", "42"))
+except (TypeError, ValueError):
+    EVAL_SEED = 42
 
 if HF_TOKEN is None:
     raise ValueError("HF_TOKEN environment variable is required")
 
-if not HF_TOKEN.startswith("hf_"):
-    raise ValueError(
-        "HF_TOKEN must start with 'hf_' prefix. Get your token from https://huggingface.co/settings/tokens"
-    )
-
-if len(HF_TOKEN) < 10:
-    raise ValueError("HF_TOKEN appears to be too short. Please check your token.")
-
 # ── Configuration ──────────────────────────────────────────────────────
 TASK_NAME = os.getenv("TASK_NAME", "basic-injection")
 BENCHMARK = os.getenv("BENCHMARK", "sentinel-env")
-MAX_STEPS = int(os.getenv("MAX_STEPS", "20"))
+
+try:
+    MAX_STEPS = int(os.getenv("MAX_STEPS", "20"))
+except (TypeError, ValueError):
+    MAX_STEPS = 20
+
 TEMPERATURE = 0.7
 MAX_TOKENS = 256
 

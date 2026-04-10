@@ -127,9 +127,8 @@ disallow_incomplete_defs = false
 check_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
-exclude = ["OpenENV RL Challenge"]
 warn_unused_ignores = true
-exclude = ["^tests/", "^tools/", "^scripts/"]
+exclude = ["OpenENV RL Challenge", "tests/", "tools/", "scripts/"]
 
 [[tool.mypy.overrides]]
 module = ["server.attacks.*", "openenv_core"]
