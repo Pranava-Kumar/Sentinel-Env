@@ -95,6 +95,21 @@ if server_src.exists():
     shutil.copytree(server_src, server_dst, ignore=ignore_patterns)
     print("  ✓ Copied: server/")
 
+# Copy jailbreak-prompts directory (required for attack engine)
+jailbreak_src = PROJECT_ROOT / "jailbreak-prompts"
+jailbreak_dst = DEPLOY_DIR / "jailbreak-prompts"
+if jailbreak_src.exists():
+    if jailbreak_dst.exists():
+        shutil.rmtree(jailbreak_dst)
+    shutil.copytree(jailbreak_src, jailbreak_dst, ignore=ignore_patterns)
+    file_count = sum(1 for _ in jailbreak_dst.rglob("*") if _.is_file())
+    print(f"  ✓ Copied: jailbreak-prompts/ ({file_count} files)")
+else:
+    # Create empty directory so the app doesn't warn
+    jailbreak_dst.mkdir(parents=True, exist_ok=True)
+    (jailbreak_dst / ".gitkeep").write_text("")
+    print("  ⚠ jailbreak-prompts/ missing - created empty placeholder")
+
 # Copy tests directory
 tests_src = PROJECT_ROOT / "tests"
 tests_dst = DEPLOY_DIR / "tests"

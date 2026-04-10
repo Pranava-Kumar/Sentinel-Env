@@ -118,6 +118,28 @@ from server.batch_api import v1_router  # noqa: E402
 app.include_router(v1_router)
 
 
+@app.get("/")
+async def root():
+    """Root endpoint - returns API information."""
+    return JSONResponse(
+        content={
+            "service": "Sentinel Environment",
+            "version": "1.1.0",
+            "description": "AI Agent Safety & Jailbreak Detection Environment",
+            "endpoints": {
+                "POST /reset": "Start a new episode",
+                "POST /step": "Execute one step",
+                "GET /state": "Get current episode state",
+                "GET /grade": "Grade current episode",
+                "GET /health": "Health check",
+                "GET /resilience-profile": "Get resilience profile",
+                "GET /metrics": "Prometheus metrics",
+            },
+            "docs": "https://huggingface.co/spaces/PranavaKumar09/sentinel-env",
+        }
+    )
+
+
 @app.post("/reset")
 async def reset(
     request: Request,
