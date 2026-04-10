@@ -104,7 +104,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "PLR2004", "RUF059", "SIM117"]  # Allow asserts, magic values, unused unpacks, nested with
-"inference.py" = ["T201", "RUF059", "SIM105"]  # Allow print, unused unpacks
+"inference.py" = ["T201", "RUF059", "SIM105", "E402"]  # Allow print, unused unpacks, imports after helper function
 "server/attacks/*" = ["RUF001", "RUF003"]  # Unicode homoglyphs are intentional for jailbreak attacks
 "server/__init__.py" = ["N999"]  # Module naming from parent dir
 "tests/__init__.py" = ["N999"]

@@ -55,6 +55,7 @@ import sys as _sys
 
 _sys.dont_write_bytecode = False
 
+
 def _safe_int(value: str | None, default: int) -> int:
     """Safely convert environment variable to int with fallback."""
     try:
@@ -229,7 +230,10 @@ def _safe_log_step(step: int, action_str: str, reward: float, done: bool, error:
         try:
             error_val = error if error else "null"
             done_val = str(done).lower()
-            print(f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
+            print(
+                f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_val} error={error_val}",
+                flush=True,
+            )
         except Exception:
             pass
 
@@ -241,7 +245,10 @@ def _safe_log_end(success: bool, steps: int, score: float, rewards: list[float])
     except Exception:
         try:
             rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-            print(f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
+            print(
+                f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
+                flush=True,
+            )
         except Exception:
             pass
 
@@ -419,10 +426,7 @@ async def main() -> None:
             score = grade_result.get("score", 0.0)
         except Exception:
             # /grade endpoint doesn't exist or failed - compute from rewards
-            if rewards:
-                score = min(sum(rewards) / len(rewards), 1.0)
-            else:
-                score = 0.0
+            score = min(sum(rewards) / len(rewards), 1.0) if rewards else 0.0
             grade_result = {
                 "score": score,
                 "detection_rate": 0.0,
@@ -498,7 +502,7 @@ def _entry_point() -> None:
         except Exception:
             pass
         try:
-            print(f"[END] success=false steps=0 score=0.00 rewards=0.00", flush=True)
+            print("[END] success=false steps=0 score=0.00 rewards=0.00", flush=True)
         except Exception:
             pass
         # Log the fatal error to stderr so it doesn't pollute stdout
@@ -508,7 +512,7 @@ def _entry_point() -> None:
     except KeyboardInterrupt:
         try:
             print(f"[START] task={TASK_NAME} env={BENCHMARK} model={MODEL_NAME}", flush=True)
-            print(f"[END] success=false steps=0 score=0.00 rewards=0.00", flush=True)
+            print("[END] success=false steps=0 score=0.00 rewards=0.00", flush=True)
         except Exception:
             pass
         _sys.exit(130)
