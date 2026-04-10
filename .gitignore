@@ -177,3 +177,6 @@ install.txt
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Visualization exports (generated, not tracked)
+.code-review-graph/visualizations/
