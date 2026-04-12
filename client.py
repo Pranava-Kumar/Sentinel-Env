@@ -3,6 +3,7 @@
 Wraps HTTP/WebSocket communication with the server following OpenEnv conventions.
 """
 
+import warnings
 from typing import Any
 
 import httpx
@@ -111,17 +112,49 @@ class SentinelEnv:
         return response.json()
 
     @classmethod
-    async def from_docker_image(
+    async def create_standalone(
         cls,
-        image_name: str | None = None,
         port: int = 7860,
+        api_key: str | None = None,
     ) -> "SentinelEnv":
-        """Create client connected to a docker-based environment."""
+        """Create client connected to a standalone server instance.
+
+        Args:
+            port: Port number for the local server.
+            api_key: Optional API key for authenticated endpoints.
+        """
         base_url = f"http://localhost:{port}"
-        instance = cls(base_url=base_url)
+        instance = cls(base_url=base_url, api_key=api_key)
         try:
             instance.client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
             return instance
         except Exception:
             await instance.close()
             raise
+
+    @classmethod
+    async def from_docker_image(
+        cls,
+        image_name: str | None = None,
+        port: int = 7860,
+        api_key: str | None = None,
+    ) -> "SentinelEnv":
+        """Create client connected to a Docker-based environment.
+
+        DEPRECATED: This method does not actually launch a Docker container.
+        Use create_standalone() instead for connecting to an already-running server.
+        To launch a Docker container, use Docker SDK or docker-compose externally.
+
+        Args:
+            image_name: Docker image name (unused, kept for API compatibility).
+            port: Port number for the local server.
+            api_key: Optional API key for authenticated endpoints.
+        """
+        warnings.warn(
+            "from_docker_image() is deprecated since v1.1.0 and will be removed in v2.0. "
+            "It does not launch a Docker container. Use create_standalone() instead, "
+            "or launch Docker container externally with Docker SDK/docker-compose.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await cls.create_standalone(port=port, api_key=api_key)

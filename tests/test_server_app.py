@@ -65,12 +65,14 @@ class TestResetEndpoint:
         assert "episode_id" in data
 
     def test_reset_invalid_task(self, client):
-        """Test reset with invalid task name."""
+        """Test reset with invalid task name returns validation error."""
         response = client.post("/reset", params={"task_name": "invalid-task", "seed": 42})
-        # Should return 500 with error message, not silently succeed
-        assert response.status_code == 500
+        # Should return 422 Unprocessable Entity (validation error)
+        assert response.status_code == 422
         data = response.json()
         assert "detail" in data
+        assert "invalid-task" in data["detail"]
+        assert "basic-injection" in data["detail"]
 
     def test_reset_different_seeds(self, client):
         """Test different seeds produce different observations."""

@@ -169,9 +169,88 @@ class TestSentinelEnv:
 
     @pytest.mark.asyncio
     async def test_from_docker_image(self):
-        """Test from_docker_image factory method."""
-        env = await SentinelEnv.from_docker_image(port=8080)
+        """Test from_docker_image factory method (deprecated but still works)."""
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            env = await SentinelEnv.from_docker_image(port=8080)
         assert env.base_url == "http://localhost:8080"
+        assert env.client is not None
+        await env.close()
+
+    @pytest.mark.asyncio
+    async def test_grade_returns_grade_result(self, env):
+        """Test grade() returns proper grade result."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "score": 0.85,
+            "detection_rate": 0.9,
+            "false_positive_rate": 0.1,
+            "correct_detections": 9,
+            "missed_attacks": 1,
+            "false_positives": 0,
+            "total_attacks": 10,
+            "total_safe": 5,
+            "total_steps": 15,
+            "avg_reasoning_score": 0.7,
+        }
+        mock_response.raise_for_status = MagicMock()
+        env.client.get.return_value = mock_response
+        env._episode_id = "test-42-abc123"
+
+        result = await env.grade()
+        assert isinstance(result, dict)
+        assert "score" in result
+        assert result["score"] == 0.85
+        assert result["detection_rate"] == 0.9
+
+    @pytest.mark.asyncio
+    async def test_grade_without_episode_id(self, env):
+        """Test grade() works even without episode_id (server handles it)."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"score": 0.0, "detection_rate": 0.0, "false_positive_rate": 0.0}
+        mock_response.raise_for_status = MagicMock()
+        env.client.get.return_value = mock_response
+
+        result = await env.grade()
+        assert "score" in result
+        # Should not include X-Episode-ID header if episode_id is None
+        env.client.get.assert_called_once()
+        call_kwargs = env.client.get.call_args
+        assert "headers" in call_kwargs.kwargs or (len(call_kwargs.args) > 1 and "headers" in call_kwargs[1])
+
+    @pytest.mark.asyncio
+    async def test_grade_with_episode_id(self, env):
+        """Test grade() includes X-Episode-ID header."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"score": 0.75, "detection_rate": 0.8}
+        mock_response.raise_for_status = MagicMock()
+        env.client.get.return_value = mock_response
+        env._episode_id = "test-episode-123"
+
+        result = await env.grade()
+        assert result["score"] == 0.75
+        # Verify header was included
+        call_kwargs = env.client.get.call_args
+        headers = call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
+        assert "X-Episode-ID" in headers
+        assert headers["X-Episode-ID"] == "test-episode-123"
+
+    @pytest.mark.asyncio
+    async def test_create_standalone(self):
+        """Test create_standalone factory method."""
+        env = await SentinelEnv.create_standalone(port=8080)
+        assert env.base_url == "http://localhost:8080"
+        assert env.client is not None
+        await env.close()
+
+    @pytest.mark.asyncio
+    async def test_create_standalone_with_api_key(self):
+        """Test create_standalone with API key."""
+        env = await SentinelEnv.create_standalone(port=9090, api_key="test-key")
+        assert env.base_url == "http://localhost:9090"
+        assert env.api_key == "test-key"
         assert env.client is not None
         await env.close()
 

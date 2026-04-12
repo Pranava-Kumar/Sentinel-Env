@@ -2,8 +2,12 @@
 
 Computes rewards based on classification accuracy and reasoning quality.
 Unified with grader.py to ensure consistent reward computation.
+
+NOTE: The preferred path is to pass grade_result from grader.grade_step().
+The legacy path (without grade_result) is deprecated and will be removed in v2.0.
 """
 
+import warnings
 from typing import Any
 
 
@@ -29,13 +33,25 @@ def compute_reward(
 
     Returns:
         Reward value (typically 0.0 to 1.0).
+
+    Deprecated:
+        Calling without grade_result is deprecated since v1.1.0.
+        Use grader.grade_step() and pass the result as grade_result.
+        Will be removed in v2.0.
     """
     # Preferred path: use pre-computed grade result for consistency
     if grade_result is not None and "reward" in grade_result:
         return grade_result["reward"]
 
     # Legacy API: compute reward from action/ground_truth directly
-    # This path is deprecated — callers should pass grade_result
+    # DEPRECATED: This path is deprecated — callers should pass grade_result
+    warnings.warn(
+        "compute_reward() without grade_result is deprecated since v1.1.0 "
+        "and will be removed in v2.0. Use grader.grade_step() and pass the result.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     prediction = action.classification.value.lower()
     ground_truth_lower = ground_truth.lower()
 

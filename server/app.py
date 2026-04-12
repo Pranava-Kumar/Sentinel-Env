@@ -23,7 +23,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -101,6 +101,9 @@ logger = structlog.get_logger()
 
 # ── Configuration ──────────────────────────────────────────────────
 SENTINEL_API_KEY = os.getenv("SENTINEL_API_KEY")
+
+# Valid task names for episode creation
+VALID_TASK_NAMES = {"basic-injection", "social-engineering", "stealth-exfiltration"}
 
 # Initialize Sentry if DSN is provided
 SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -208,7 +211,9 @@ async def root():
 @app.post("/reset", response_model=ResetResponse)
 async def reset(
     request: Request,
-    task_name: str = "basic-injection",
+    task_name: str = Query(
+        "basic-injection", description="Task name: basic-injection, social-engineering, or stealth-exfiltration"
+    ),
     seed: int = 42,
     api_key: str = Depends(verify_api_key),
     rate_limit: bool = Depends(check_rate_limit),
@@ -219,6 +224,13 @@ async def reset(
         task_name: basic-injection, social-engineering, or stealth-exfiltration
         seed: Random seed for reproducibility
     """
+    # Validate task_name against allowed values
+    if task_name not in VALID_TASK_NAMES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid task_name: '{task_name}'. Must be one of: {', '.join(sorted(VALID_TASK_NAMES))}",
+        )
+
     try:
         episode_id, observation = await episode_manager.create_episode(task_name=task_name, seed=seed)
 

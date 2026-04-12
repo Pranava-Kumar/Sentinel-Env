@@ -10,12 +10,14 @@ Provides:
 """
 
 import asyncio
+import hmac
+import os
 import time
 from collections import OrderedDict
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from models import RecommendedAction, SentinelAction, ThreatCategory
@@ -23,6 +25,18 @@ from models import RecommendedAction, SentinelAction, ThreatCategory
 logger = structlog.get_logger()
 
 v1_router = APIRouter(prefix="/api/v1")
+
+# API key for WebSocket authentication
+SENTINEL_API_KEY = os.getenv("SENTINEL_API_KEY")
+
+
+async def verify_websocket_api_key(token: str = Query(None)) -> bool:
+    """Verify API key for WebSocket connections.
+
+    WebSocket connections can't use headers, so we use query parameter instead.
+    The token should be passed as ?token=<api_key> in the WebSocket URL.
+    """
+    return not (SENTINEL_API_KEY and (not token or not hmac.compare_digest(token, SENTINEL_API_KEY)))
 
 
 # ── Pydantic Models ──────────────────────────────────────────────────
@@ -365,8 +379,13 @@ async def compare_models(model_ids: str = ""):
 
 
 @v1_router.websocket("/ws/metrics")
-async def websocket_metrics(websocket: WebSocket):
-    """WebSocket stream of real-time metrics."""
+async def websocket_metrics(websocket: WebSocket, token: str = Query(None)):
+    """WebSocket stream of real-time metrics. Requires API key if configured."""
+    # Authenticate if API key is configured
+    if SENTINEL_API_KEY and (not token or not hmac.compare_digest(token, SENTINEL_API_KEY)):
+        await websocket.close(code=4001, reason="Invalid or missing API key")
+        return
+
     # Lazy import to avoid circular dependency with app.py
     from server.dependencies import episode_manager
 
@@ -389,8 +408,13 @@ async def websocket_metrics(websocket: WebSocket):
 
 
 @v1_router.websocket("/ws/episodes")
-async def websocket_episodes(websocket: WebSocket):
-    """WebSocket stream of episode information."""
+async def websocket_episodes(websocket: WebSocket, token: str = Query(None)):
+    """WebSocket stream of episode information. Requires API key if configured."""
+    # Authenticate if API key is configured
+    if SENTINEL_API_KEY and (not token or not hmac.compare_digest(token, SENTINEL_API_KEY)):
+        await websocket.close(code=4001, reason="Invalid or missing API key")
+        return
+
     # Lazy import to avoid circular dependency with app.py
     from server.dependencies import episode_manager
 

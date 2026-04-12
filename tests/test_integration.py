@@ -3,12 +3,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from server.app import app
+from server.app import app, rate_limiter
 
 
 @pytest.fixture
 def client():
     """FastAPI TestClient for the server."""
+    # Reset rate limiter before each test to prevent 429 errors
+    rate_limiter.requests.clear()
     return TestClient(app)
 
 

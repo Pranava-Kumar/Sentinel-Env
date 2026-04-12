@@ -8,6 +8,7 @@ Provides:
 - Error tracking context for Sentry
 """
 
+import re
 import time
 import uuid
 
@@ -19,7 +20,36 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 # Maximum request body size (1MB)
 MAX_BODY_SIZE = 1_048_576
 
+# Maximum length for exception messages in logs
+MAX_EXCEPTION_MESSAGE_LENGTH = 200
+
 logger = structlog.get_logger()
+
+
+def _sanitize_exception_message(exc: Exception) -> str:
+    """Truncate and sanitize exception messages to prevent log flooding and data leakage.
+
+    Removes potential PII patterns (emails, IPs, tokens) and truncates long messages.
+    """
+    msg = str(exc)
+
+    # Truncate long messages
+    if len(msg) > MAX_EXCEPTION_MESSAGE_LENGTH:
+        msg = msg[:MAX_EXCEPTION_MESSAGE_LENGTH] + "...[truncated]"
+
+    # Remove potential PII patterns
+    # Email addresses
+    msg = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "[EMAIL_REDACTED]", msg)
+    # IP addresses (IPv4)
+    msg = re.sub(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP_REDACTED]", msg)
+    # API keys/tokens (common patterns)
+    msg = re.sub(
+        r"(?:api[_-]?key|token|secret|password)\s*[:=]\s*\S+", "[CREDENTIAL_REDACTED]", msg, flags=re.IGNORECASE
+    )
+    # Bearer tokens
+    msg = re.sub(r"Bearer\s+[A-Za-z0-9\-._~+/]+=*", "Bearer [TOKEN_REDACTED]", msg)
+
+    return msg
 
 
 class StructuredLoggingMiddleware(BaseHTTPMiddleware):
@@ -75,12 +105,10 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Sanitize exception message to prevent log flooding and data leakage
-            msg = str(e)
-            if len(msg) > 200:
-                msg = msg[:200] + "...[truncated]"
+            sanitized_msg = _sanitize_exception_message(e)
             logger.error(
                 "Request failed",
-                error=msg,
+                error=sanitized_msg,
                 duration_ms=round((time.time() - start_time) * 1000, 2),
                 exc_info=True,
             )
@@ -187,9 +215,12 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             request_id = getattr(request.state, "request_id", "unknown")
 
+            # Sanitize exception message
+            sanitized_msg = _sanitize_exception_message(e)
+
             logger.error(
                 "Unhandled exception",
-                error=str(e),
+                error=sanitized_msg,
                 request_id=request_id,
                 path=request.url.path,
                 exc_info=True,

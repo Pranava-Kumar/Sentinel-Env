@@ -145,8 +145,10 @@ def _safe_log_end(success: bool, steps: int, score: float, rewards: list[float])
             pass
 
 
-async def run_single_task(env, task_name: str, seed: int, llm_client: AsyncOpenAI | None, llm_ready: bool) -> dict:
-    """Run one task and return grade result."""
+async def run_single_task_with_env(
+    env, task_name: str, seed: int, llm_client: AsyncOpenAI | None, llm_ready: bool
+) -> dict:
+    """Run one task with its own env instance and return grade result."""
     _safe_log_start(task=task_name, model=MODEL_NAME, benchmark=BENCHMARK)
 
     rewards = []
@@ -202,11 +204,9 @@ async def run_single_task(env, task_name: str, seed: int, llm_client: AsyncOpenA
             if done:
                 break
 
-        # Grade episode
+        # Grade episode using client's grade() method
         try:
-            headers = {"X-Episode-ID": env.episode_id} if env.episode_id else {}
-            response = await env.client.get("/grade", headers=headers)
-            grade_result = response.json()
+            grade_result = await env.grade()
             score = grade_result.get("score", 0.0)
         except Exception:
             score = min(sum(rewards) / len(rewards), 1.0) if rewards else 0.0
@@ -223,9 +223,17 @@ async def run_single_task(env, task_name: str, seed: int, llm_client: AsyncOpenA
         return {"task": task_name, "score": 0.0, "success": False, "steps": 0, "error": str(e)}
 
 
+async def run_single_task(env, task_name: str, seed: int, llm_client: AsyncOpenAI | None, llm_ready: bool) -> dict:
+    """Run one task and return grade result.
+
+    Note: This function is kept for backward compatibility but delegates to
+    run_single_task_with_env which manages its own env lifecycle.
+    """
+    return await run_single_task_with_env(env, task_name, seed, llm_client, llm_ready)
+
+
 async def main():
-    """Run ALL 3 tasks required by validator."""
-    env = None
+    """Run ALL 3 tasks required by validator in parallel."""
     llm_client: AsyncOpenAI | None = None
     llm_ready = False
 
@@ -244,39 +252,54 @@ async def main():
         except Exception as e:
             logger.error(f"LLM init failed: {e}")
 
-    # Initialize environment
-    try:
-        if LOCAL_IMAGE_NAME:
-            env = await SentinelEnv.from_docker_image(LOCAL_IMAGE_NAME)
-        else:
-            env = SentinelEnv(base_url=BASE_URL)
-            env.client = httpx.AsyncClient(base_url=BASE_URL, timeout=ENV_TIMEOUT)
-    except Exception as e:
-        logger.error(f"Environment init failed: {e}")
-        return
+    # Configure connection pooling for better performance
+    limits = httpx.Limits(max_connections=10, max_keepalive_connections=5)
 
-    if env is None:
-        return
+    async def run_task_with_env(task_name: str) -> dict:
+        """Create dedicated env instance for this task, run it, and clean up."""
+        env = None
+        try:
+            if LOCAL_IMAGE_NAME:
+                # Use create_standalone since from_docker_image is deprecated
+                env = await SentinelEnv.create_standalone(api_key=None)
+            else:
+                env = SentinelEnv(base_url=BASE_URL)
+                env.client = httpx.AsyncClient(
+                    base_url=BASE_URL,
+                    timeout=ENV_TIMEOUT,
+                    limits=limits,
+                )
+            return await run_single_task_with_env(env, task_name, EVAL_SEED, llm_client, llm_ready)
+        except Exception as e:
+            logger.error(f"Task {task_name} setup failed: {e}")
+            return {"task": task_name, "score": 0.0, "success": False, "steps": 0, "error": str(e)}
+        finally:
+            if env is not None:
+                try:
+                    await env.close()
+                except Exception:
+                    pass
 
-    # Run all 3 tasks
+    # Run all 3 tasks in parallel
     tasks = ["basic-injection", "social-engineering", "stealth-exfiltration"]
-    results = []
+    results = await asyncio.gather(*(run_task_with_env(task_name) for task_name in tasks), return_exceptions=True)
 
-    for task_name in tasks:
-        result = await run_single_task(env, task_name, EVAL_SEED, llm_client, llm_ready)
-        results.append(result)
+    # Handle any unexpected exceptions from gather
+    processed_results = []
+    for i, result in enumerate(results):
+        if isinstance(result, Exception):
+            logger.error(f"Task {tasks[i]} failed with exception: {result}")
+            processed_results.append(
+                {"task": tasks[i], "score": 0.0, "success": False, "steps": 0, "error": str(result)}
+            )
+        else:
+            processed_results.append(result)
 
     # Summary
-    print(f"\n[SUMMARY] Tasks: {len(results)}/{len(tasks)}", flush=True)
-    for r in results:
+    print(f"\n[SUMMARY] Tasks: {len(processed_results)}/{len(tasks)}", flush=True)
+    for r in processed_results:
         status = "PASS" if r.get("success") else "FAIL"
         print(f"  [{status}] {r['task']}: score={r['score']:.2f}, steps={r.get('steps', 0)}", flush=True)
-
-    # Cleanup
-    try:
-        await env.close()
-    except Exception:
-        pass
 
 
 if __name__ == "__main__":
