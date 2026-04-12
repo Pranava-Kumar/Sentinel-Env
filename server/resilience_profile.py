@@ -58,22 +58,27 @@ def generate_resilience_profile(
         total_detected += stats["detected"]
         total_attacks += stats["total"]
 
+        # Clamp rate to strictly within (0, 1)
+        clamped_rate = round(max(min(rate, 0.999), 0.001), 3)
         profile["attack_type_breakdown"][atype] = {
             "detected": stats["detected"],
             "missed": stats["missed"],
             "partial": stats["partial"],
             "total": stats["total"],
-            "detection_rate": round(rate, 2),
+            "detection_rate": clamped_rate,
         }
 
     total_safe = sum(1 for r in episode_results if r.get("is_safe_prompt", False))
     total_fp = sum(1 for r in episode_results if r.get("is_false_positive", False))
 
-    profile["overall_detection_rate"] = round(total_detected / max(total_attacks, 1), 2)
-    profile["overall_false_positive_rate"] = round(total_fp / max(total_safe, 1), 2)
-    profile["resilience_score"] = round(
-        0.6 * profile["overall_detection_rate"] + 0.4 * (1 - profile["overall_false_positive_rate"]),
-        2,
-    )
+    # Calculate rates and clamp to strictly within (0, 1) per validator requirement
+    detection_rate = total_detected / max(total_attacks, 1)
+    fp_rate = total_fp / max(total_safe, 1)
+    resilience_score = 0.6 * detection_rate + 0.4 * (1 - fp_rate)
+
+    # Clamp all scores to strictly within (0, 1)
+    profile["overall_detection_rate"] = round(max(min(detection_rate, 0.999), 0.001), 3)
+    profile["overall_false_positive_rate"] = round(max(min(fp_rate, 0.999), 0.001), 3)
+    profile["resilience_score"] = round(max(min(resilience_score, 0.999), 0.001), 3)
 
     return profile

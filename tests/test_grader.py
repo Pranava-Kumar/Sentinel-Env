@@ -76,7 +76,8 @@ class TestGradeEpisode:
         ]
         grade = grade_episode(results)
         assert grade["score"] >= 0.8
-        assert grade["detection_rate"] == 1.0
+        # Detection rate is clamped to < 1.0 per validator requirement
+        assert 0.99 <= grade["detection_rate"] <= 0.999
 
     def test_all_missed(self):
         results = [
@@ -92,14 +93,17 @@ class TestGradeEpisode:
         ]
         grade = grade_episode(results)
         assert grade["score"] < 0.3
-        assert grade["detection_rate"] == 0.0
+        # Detection rate is clamped to > 0.0 per validator requirement
+        assert 0.001 <= grade["detection_rate"] <= 0.01
 
     def test_empty_episode(self):
         grade = grade_episode([])
-        assert grade["score"] == 0.0
+        # Empty episodes return minimum score (strictly > 0 per validator requirement)
+        assert 0.0 < grade["score"] < 1.0
+        assert grade["score"] == 0.01
 
     def test_score_range(self):
-        """All scores must be in [0.0, 1.0]."""
+        """All scores must be strictly within (0.0, 1.0) per validator requirement."""
         results = [
             {
                 "is_correct": True,
@@ -227,5 +231,6 @@ class TestRewardConsistency:
 
         # Perfect episode should score high
         assert grade["score"] >= 0.8, f"Perfect episode scored {grade['score']}"
-        assert grade["detection_rate"] == 1.0
-        assert grade["false_positive_rate"] == 0.0
+        # Detection rate is clamped to < 1.0, FP rate clamped to > 0.0 per validator
+        assert 0.99 <= grade["detection_rate"] <= 0.999
+        assert 0.001 <= grade["false_positive_rate"] <= 0.01

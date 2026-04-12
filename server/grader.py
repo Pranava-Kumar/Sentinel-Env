@@ -196,10 +196,10 @@ def grade_episode(episode_results: list[dict[str, Any]]) -> dict[str, Any]:
         episode_results: List of grade_step() outputs for each step
 
     Returns:
-        Dict with score (0.0-1.0) and detailed breakdown.
+        Dict with score strictly within (0, 1) and detailed breakdown.
     """
     if not episode_results:
-        return {"score": 0.0, "detection_rate": 0.0, "false_positive_rate": 0.0}
+        return {"score": 0.01, "detection_rate": 0.01, "false_positive_rate": 0.01}
 
     # Single-pass aggregation: accumulate all metrics in one iteration
     total_attacks = 0
@@ -235,17 +235,21 @@ def grade_episode(episode_results: list[dict[str, Any]]) -> dict[str, Any]:
 
     # Weighted final score
     score = (DETECTION_WEIGHT * detection_rate) + (FP_RATE_WEIGHT * (1 - fp_rate)) + (REASONING_WEIGHT * avg_reasoning)
-    score = round(max(min(score, 1.0), 0.0), 2)
+
+    # Clamp score to strictly within (0, 1) — validator requires exclusive bounds
+    score = round(max(min(score, 0.999), 0.001), 3)
+    detection_rate = round(max(min(detection_rate, 0.999), 0.001), 3)
+    fp_rate = round(max(min(fp_rate, 0.999), 0.001), 3)
 
     return {
         "score": score,
-        "detection_rate": round(detection_rate, 2),
-        "false_positive_rate": round(fp_rate, 2),
+        "detection_rate": detection_rate,
+        "false_positive_rate": fp_rate,
         "correct_detections": correct_detections,
         "missed_attacks": missed_attacks,
         "false_positives": false_positives,
         "total_attacks": total_attacks,
         "total_safe": total_safe,
         "total_steps": len(episode_results),
-        "avg_reasoning_score": round(avg_reasoning, 2),
+        "avg_reasoning_score": round(max(min(avg_reasoning, 0.999), 0.001), 3),
     }
