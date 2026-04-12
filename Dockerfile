@@ -18,6 +18,11 @@ FROM python:3.11-slim AS production
 
 WORKDIR /app
 
+# Force rebuild with timestamp
+ARG BUILD_TIMESTAMP=20260412-2330
+ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
+RUN echo "Build: ${BUILD_TIMESTAMP}"
+
 # Install curl for healthcheck and runtime deps
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/* && \
