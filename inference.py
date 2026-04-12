@@ -207,11 +207,12 @@ async def run_single_task_with_env(
         # Grade episode using client's grade() method
         try:
             grade_result = await env.grade()
-            score = grade_result.get("score", 0.0)
+            score = grade_result.get("score", 0.01)
         except Exception:
-            score = min(sum(rewards) / len(rewards), 1.0) if rewards else 0.0
+            score = min(max(sum(rewards) / len(rewards), 0.001), 0.999) if rewards else 0.01
 
-        score = min(max(score, 0.0), 1.0)
+        # Ensure score is strictly within (0, 1) — validator requirement
+        score = round(max(min(score, 0.999), 0.001), 3)
         success = score >= 0.3
         _safe_log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
@@ -219,8 +220,8 @@ async def run_single_task_with_env(
 
     except Exception as e:
         logger.error(f"Task {task_name} failed: {e}")
-        _safe_log_end(success=False, steps=0, score=0.0, rewards=[])
-        return {"task": task_name, "score": 0.0, "success": False, "steps": 0, "error": str(e)}
+        _safe_log_end(success=False, steps=0, score=0.01, rewards=[])
+        return {"task": task_name, "score": 0.01, "success": False, "steps": 0, "error": str(e)}
 
 
 async def run_single_task(env, task_name: str, seed: int, llm_client: AsyncOpenAI | None, llm_ready: bool) -> dict:
