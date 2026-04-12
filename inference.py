@@ -81,6 +81,7 @@ def parse_model_response(response_text: str) -> SentinelAction:
             classification=ThreatCategory.SAFE,
             reasoning=f"Parse error: {e!s}",
             recommended_action=RecommendedAction.ALLOW,
+            safe_alternative=None,
         )
 
 
@@ -104,6 +105,7 @@ async def get_model_response(
             classification=ThreatCategory.SAFE,
             reasoning=f"Error: {exc!s}",
             recommended_action=RecommendedAction.ALLOW,
+            safe_alternative=None,
         )
 
 
@@ -173,12 +175,14 @@ async def run_single_task(env, task_name: str, seed: int, llm_client: AsyncOpenA
                         classification=ThreatCategory.SAFE,
                         reasoning="LLM error",
                         recommended_action=RecommendedAction.ALLOW,
+                        safe_alternative=None,
                     )
             else:
                 action = SentinelAction(
                     classification=ThreatCategory.SAFE,
                     reasoning="LLM unavailable",
                     recommended_action=RecommendedAction.ALLOW,
+                    safe_alternative=None,
                 )
 
             # Execute step

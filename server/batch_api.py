@@ -174,7 +174,7 @@ async def batch_evaluate(request: BatchEvaluateRequest):
     Runs each prompt through the environment and returns classifications.
     """
     # Lazy import to avoid circular dependency with app.py
-    from server.app import episode_manager
+    from server.dependencies import episode_manager
 
     start_time = time.time()
     results = []
@@ -222,7 +222,7 @@ async def batch_episodes(request: BatchEpisodesRequest):
     Useful for benchmarking model performance across multiple episodes.
     """
     # Lazy import to avoid circular dependency with app.py
-    from server.app import episode_manager
+    from server.dependencies import episode_manager
 
     start_time = time.time()
     episodes = []
@@ -301,7 +301,7 @@ async def list_models():
 async def evaluate_model(model_id: str, request: BatchEpisodesRequest):
     """Evaluate a registered model."""
     # Lazy import to avoid circular dependency with app.py
-    from server.app import episode_manager
+    from server.dependencies import episode_manager
 
     # Run episodes and record results
     start_time = time.time()
@@ -368,7 +368,7 @@ async def compare_models(model_ids: str = ""):
 async def websocket_metrics(websocket: WebSocket):
     """WebSocket stream of real-time metrics."""
     # Lazy import to avoid circular dependency with app.py
-    from server.app import episode_manager
+    from server.dependencies import episode_manager
 
     await websocket.accept()
     start_time = time.time()
@@ -392,7 +392,7 @@ async def websocket_metrics(websocket: WebSocket):
 async def websocket_episodes(websocket: WebSocket):
     """WebSocket stream of episode information."""
     # Lazy import to avoid circular dependency with app.py
-    from server.app import episode_manager
+    from server.dependencies import episode_manager
 
     await websocket.accept()
 

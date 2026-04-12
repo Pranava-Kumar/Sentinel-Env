@@ -13,10 +13,17 @@ from models import SentinelAction, SentinelObservation, SentinelState
 class SentinelEnv:
     """Client for the Sentinel Environment server."""
 
-    def __init__(self, base_url: str = "http://localhost:7860"):
+    def __init__(self, base_url: str = "http://localhost:7860", api_key: str | None = None):
         self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
         self.client: httpx.AsyncClient | None = None
         self._episode_id: str | None = None
+
+    def _auth_headers(self) -> dict[str, str]:
+        """Return authentication headers if API key is set."""
+        if self.api_key:
+            return {"X-API-Key": self.api_key}
+        return {}
 
     async def __aenter__(self):
         try:
@@ -47,6 +54,7 @@ class SentinelEnv:
         response = await self.client.post(
             "/reset",
             params={"task_name": task_name, "seed": seed},
+            headers=self._auth_headers(),
         )
         response.raise_for_status()
         data = response.json()
@@ -61,7 +69,7 @@ class SentinelEnv:
         if self.client is None:
             raise RuntimeError("Client not initialized.")
 
-        headers = {}
+        headers = self._auth_headers()
         if self._episode_id:
             headers["X-Episode-ID"] = self._episode_id
 
@@ -81,9 +89,26 @@ class SentinelEnv:
         if self.client is None:
             raise RuntimeError("Client not initialized.")
 
-        response = await self.client.get("/state")
+        headers = self._auth_headers()
+        if self._episode_id:
+            headers["X-Episode-ID"] = self._episode_id
+
+        response = await self.client.get("/state", headers=headers)
         response.raise_for_status()
         return SentinelState(**response.json())
+
+    async def grade(self) -> dict[str, Any]:
+        """Grade the current episode."""
+        if self.client is None:
+            raise RuntimeError("Client not initialized.")
+
+        headers = self._auth_headers()
+        if self._episode_id:
+            headers["X-Episode-ID"] = self._episode_id
+
+        response = await self.client.get("/grade", headers=headers)
+        response.raise_for_status()
+        return response.json()
 
     @classmethod
     async def from_docker_image(

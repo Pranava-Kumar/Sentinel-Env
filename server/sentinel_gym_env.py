@@ -10,7 +10,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from models import RecommendedAction, SentinelAction, ThreatCategory
+from models import RecommendedAction, SentinelAction, SentinelObservation, ThreatCategory
 from server.sentinel_environment import SentinelEnvironment
 
 
@@ -50,8 +50,8 @@ class SentinelGymEnv(gym.Env):
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(384,), dtype=np.float32)
 
         # Episode tracking
-        self.current_obs = None
-        self.ground_truth = None
+        self.current_obs: SentinelObservation | None = None
+        self.ground_truth: str | None = None
         self.step_count = 0
 
     def reset(
@@ -67,7 +67,9 @@ class SentinelGymEnv(gym.Env):
 
         # Embed observation
         if self.embedder:
-            embedding = self.embedder.embed(obs.user_prompt).squeeze(0)
+            embedding = self.embedder.encode(obs.user_prompt)
+            if hasattr(embedding, "squeeze"):
+                embedding = embedding.squeeze(0)
             if hasattr(embedding, "detach"):
                 embedding = embedding.detach().cpu().numpy()
         else:
@@ -92,7 +94,10 @@ class SentinelGymEnv(gym.Env):
         # Convert action index to SentinelAction
         classification = list(ThreatCategory)[action_idx]
 
-        if classification == ThreatCategory.SAFE or self.current_obs.is_safe_prompt:
+        assert self.current_obs is not None, "Must call reset() before step()"
+        is_safe = self.current_obs.is_safe_prompt
+
+        if classification == ThreatCategory.SAFE or is_safe:
             recommended_action = RecommendedAction.ALLOW
             reasoning = "This prompt appears safe based on current analysis"
         else:
@@ -122,7 +127,9 @@ class SentinelGymEnv(gym.Env):
 
         # Embed next observation
         if self.embedder:
-            next_embedding = self.embedder.embed(next_obs.user_prompt).squeeze(0)
+            next_embedding = self.embedder.encode(next_obs.user_prompt)
+            if hasattr(next_embedding, "squeeze"):
+                next_embedding = next_embedding.squeeze(0)
             if hasattr(next_embedding, "detach"):
                 next_embedding = next_embedding.detach().cpu().numpy()
         else:

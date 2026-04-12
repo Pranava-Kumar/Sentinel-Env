@@ -27,6 +27,7 @@ class RateLimiter:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.max_entries = max_entries
+        self._cleanup_threshold = int(max_entries * 0.8)  # Pre-computed for performance
         self.requests: OrderedDict[str, deque[float]] = OrderedDict()
 
     async def check_rate_limit(self, client_ip: str) -> tuple[bool, int]:
@@ -61,7 +62,7 @@ class RateLimiter:
         remaining = self.max_requests - len(ip_requests)
 
         # Proactive cleanup: when approaching max_entries, clean expired entries
-        if len(self.requests) > self.max_entries * 0.8:
+        if len(self.requests) > self._cleanup_threshold:
             self._cleanup_expired()
 
         # Evict oldest entries if we've exceeded max_entries

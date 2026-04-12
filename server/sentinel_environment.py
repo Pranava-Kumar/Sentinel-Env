@@ -120,8 +120,9 @@ class SentinelEnvironment:
         grade_result = grade_step(action.classification, ground_truth, action.reasoning)
 
         # current_attack is guaranteed to be set by reset() before step() is called
+        if self.current_attack is None:
+            raise RuntimeError("current_attack is None — reset() must be called before step()")
         attack = self.current_attack
-        assert attack is not None
 
         # Build step result
         step_result: dict[str, Any] = {

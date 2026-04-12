@@ -74,11 +74,14 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
             return response
 
         except Exception as e:
-            process_time = time.time() - start_time
+            # Sanitize exception message to prevent log flooding and data leakage
+            msg = str(e)
+            if len(msg) > 200:
+                msg = msg[:200] + "...[truncated]"
             logger.error(
                 "Request failed",
-                error=str(e),
-                duration_ms=round(process_time * 1000, 2),
+                error=msg,
+                duration_ms=round((time.time() - start_time) * 1000, 2),
                 exc_info=True,
             )
             raise

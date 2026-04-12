@@ -28,9 +28,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from models import SentinelAction
-from server.episode_manager import EpisodeManager
+from server.dependencies import episode_manager, rate_limiter
 from server.middleware import setup_production_middleware
-from server.rate_limiter import RateLimiter
 
 # ── Response Models ──────────────────────────────────────────────────
 
@@ -118,9 +117,6 @@ if SENTRY_DSN:
     except ImportError:
         logger.warning("sentry-sdk not installed, error tracking disabled")
 
-# ── Rate Limiting ──────────────────────────────────────────────────
-rate_limiter = RateLimiter(max_requests=100, window_seconds=60, max_entries=10000)
-
 
 async def get_client_ip(request: Request) -> str:
     if request.client is None:
@@ -128,17 +124,14 @@ async def get_client_ip(request: Request) -> str:
     return request.client.host
 
 
-async def check_rate_limit(request: Request, client_ip: str = Depends(get_client_ip)):
+async def check_rate_limit(request: Request, client_ip: str = Depends(get_client_ip)) -> bool:
     """Check rate limit and store remaining count in request state."""
     allowed, remaining = await rate_limiter.check_rate_limit(client_ip)
     request.state.rate_limit_remaining = remaining
     request.state.rate_limit_limit = rate_limiter.max_requests
     if not allowed:
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
-
-
-# Episode manager for concurrent episode support
-episode_manager = EpisodeManager(max_episodes=1000, ttl_seconds=3600)
+    return True
 
 
 async def verify_api_key(x_api_key: str = Header(None)):

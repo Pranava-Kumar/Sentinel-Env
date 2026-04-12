@@ -36,12 +36,12 @@ class TextEmbedder:
             from sentence_transformers import SentenceTransformer
 
             logger.info("Loading sentence-transformers model", model=self.model_name)
-            self.model = SentenceTransformer(self.model_name)
+            model = SentenceTransformer(self.model_name)
+            self.model = model
             # Use new method name if available, fallback to old
-            self.embedding_dim = (
-                getattr(self.model, "get_embedding_dimension", self.model.get_sentence_embedding_dimension)()
-                or self.fallback_dim
-            )
+            get_dim = getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension
+            self.embedding_dim: int = get_dim() if get_dim else self.fallback_dim
+            self.embedding_dim = self.embedding_dim or self.fallback_dim
             logger.info("Text embedder loaded successfully", dim=self.embedding_dim)
         except Exception as e:
             logger.warning(

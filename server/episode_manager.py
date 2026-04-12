@@ -38,14 +38,17 @@ class EpisodeManager:
         Returns:
             Tuple of (episode_id, initial_observation)
         """
+        # Create environment and reset OUTSIDE the lock to avoid blocking
+        # other episode operations during the potentially slow reset()
+        env = SentinelEnvironment()
+        observation = env.reset(task_name=task_name, seed=seed)
+
+        episode_id = str(uuid.uuid4())
+
         async with self._lock:
             # Evict old episodes if at capacity
             if len(self.episodes) >= self.max_episodes:
                 await self._evict_old_episodes()
-
-            episode_id = str(uuid.uuid4())
-            env = SentinelEnvironment()
-            observation = env.reset(task_name=task_name, seed=seed)
 
             self.episodes[episode_id] = env
             self.episode_metadata[episode_id] = {

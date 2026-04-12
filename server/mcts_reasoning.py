@@ -11,6 +11,7 @@ Based on:
 
 import json
 import math
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -135,11 +136,12 @@ class MCTSReasoningTree:
         self.num_actions = num_actions
         self.max_depth = max_depth
         self.device = torch.device(device)
+        self._rng = np.random.RandomState(seed=42)  # Seeded RNG for reproducibility
 
         # Statistics
         self.total_searches = 0
         self.avg_depth_reached = 0.0
-        self.depth_history: list[float] = []
+        self.depth_history: deque[float] = deque(maxlen=100)  # Bounded to last 100 entries
 
     def set_temperature(self, temperature: float) -> None:
         """Update exploration temperature.
@@ -185,7 +187,7 @@ class MCTSReasoningTree:
         # Update statistics
         self.total_searches += 1
         self.depth_history.append(max_depth_reached)
-        self.avg_depth_reached = np.mean(self.depth_history[-100:]) if self.depth_history else 0
+        self.avg_depth_reached = float(np.mean(self.depth_history)) if self.depth_history else 0.0
 
         # Extract results
         best_action = self._select_action(root)
@@ -230,10 +232,11 @@ class MCTSReasoningTree:
         current = node
         depth = current_depth
         while current.children and depth < self.max_depth:
-            if current.is_fully_expanded(self.num_actions):
-                current = current.best_child(self.c_puct)
-                depth += 1
-            else:
+            # Always traverse to best child when children exist
+            current = current.best_child(self.c_puct)
+            depth += 1
+            # If not fully expanded, stop to expand this node
+            if not current.is_fully_expanded(self.num_actions) or depth >= self.max_depth:
                 break
 
         # Expansion: add a new child
@@ -245,7 +248,7 @@ class MCTSReasoningTree:
                 # Weighted by policy prior
                 probs = np.array([policy_probs[a] + 1e-8 for a in available])
                 probs /= probs.sum()
-                action_idx = np.random.choice(len(available), p=probs)
+                action_idx = self._rng.choice(len(available), p=probs)
                 action = available[action_idx]
 
                 child = MCTSNode(
@@ -310,11 +313,11 @@ class MCTSReasoningTree:
             node: Leaf node where reward was computed.
             reward: Reward value to backpropagate.
         """
-        current = node
+        current: MCTSNode | None = node
         while current is not None:
             current.visits += 1
             current.total_reward += reward
-            current = current.parent
+            current = current.parent  # type: ignore[assignment]
 
     def _select_action(self, root: MCTSNode) -> int:
         """Select action with most visits (robust child).
@@ -326,7 +329,7 @@ class MCTSReasoningTree:
             Best action index.
         """
         if not root.children:
-            return np.argmax([root.prior] * self.num_actions)  # Fallback
+            return int(np.argmax([root.prior] * self.num_actions))  # Fallback
 
         best_action = max(root.children.keys(), key=lambda a: root.children[a].visits)
         return best_action
@@ -423,7 +426,7 @@ class MCTSReasoningTree:
         """
 
         def _node_to_dict(node: MCTSNode) -> dict[str, Any]:
-            result = {
+            result: dict[str, Any] = {
                 "action": node.action,
                 "visits": node.visits,
                 "q_value": round(node.q_value, 4),

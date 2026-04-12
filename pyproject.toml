@@ -89,6 +89,10 @@ graph = [
     "networkx>=3.6.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["server*"]
+exclude = ["model_checkpoints_hyperion*", "tests*", "scripts*", "docs*", "tools*"]
+
 [project.scripts]
 sentinel-server = "server.app:main"
 server = "server.app:main"

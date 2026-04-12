@@ -514,10 +514,12 @@ class SoftMoEPolicyNetwork(nn.Module):
             Dict with expert names and their average routing weights.
         """
         with torch.no_grad():
-            router_weights = self.router.router.weight.data  # (12, 256)
-            norms = router_weights.norm(dim=1)  # (12,)
+            router_weights = self.router.router.weight.data  # type: ignore[attr-defined]  # (12, 256)
+            norms = router_weights.norm(dim=1)  # type: ignore[operator]  # (12,)
             total = norms.sum()
-            proportions = (norms / total).tolist() if total > 0 else [1.0 / self.num_experts] * self.num_experts
+            proportions: list[float] = (
+                (norms / total).tolist() if total > 0 else [1.0 / self.num_experts] * self.num_experts
+            )
 
         return {name: round(prop, 4) for name, prop in zip(self.EXPERT_NAMES, proportions, strict=False)}
 
